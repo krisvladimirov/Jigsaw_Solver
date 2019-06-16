@@ -153,8 +153,7 @@ def write_data(extracted_pieces, dimensions, og_dimensions):
         # Do the pre-calculation of the weights
         solver = Solver.Solver()
         # Check if the path exists if it doesn't create one
-        solver.save_weights_to_npy(root_folder="", child_folder="", name="")
-        solver = None
+        solver.save_weights_to_npy()
     else:
         print("Did not pre-calculate weights, \"mode\" == write "
               "but \"weight\" perform is \"yes\".\nCheck the settings.json if a mistake was made\n")

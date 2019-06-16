@@ -35,6 +35,9 @@ class Solver:
         self.weights = None
         self.original_height = Constants.VALUE_INITIALIZER
         self.original_width = Constants.VALUE_INITIALIZER
+        # Hold all edges
+        self.all_edges = []
+        self.important_edges = []
 
         # TODO - Old variables to be corrected
         # Stores all 4 relations between 2 pieces
@@ -249,8 +252,11 @@ class Solver:
         """
 
         piece_count = len(self.pieces)
-        self.weights = numpy
-
+        self.weights = numpy.full((piece_count, piece_count, 16), fill_value=Constants.INFINITY, dtype="float")
+        # Keeps track of the parent of each piece in the MST tree
+        self.parent_set = [i for i in range(len(self.pieces))]
+        # Keeps track of all trees that are formed
+        self.trees = [{i} for i in range(len(self.pieces))]
 
 
         # self.solution = numpy.zeros((Constants.PATCH_DIMENSIONS * Constants.HEIGHT_RANGE,
@@ -353,68 +359,140 @@ class Solver:
 
         return cropped
 
-    def get_mgc(self):
+    def get_mgc_rotated(self):
         """
-            Calculated the MGC between all pieces
+            Calculates the MGC between all pieces while taking the rotation into consideration
         :return:
         """
         t = time.process_time()
+        """
+            The process of calculating the weight is performed for all 16 relations between the pieces as the 
+            orientation is unknown. This function is very similar to get_mgc, but I have decided to split them as the 
+            logic will become very confusing if one function is used for both
+        """
         for piece_a in self.pieces:
             image_a = piece_a.piece
             for piece_b in self.pieces:
-                # This loops gets the necessary 4 rotations of piece_a
+                # Check if two pieces are the same, if they are skip the comparison
                 if piece_a != piece_b:
-                    # for side_a in range(0, 4):
+                    image_b = piece_b.piece
+                    # Go through the 4 sides of piece A
                     for side_a in range(0, 4):
-                        # Check if two pieces are the same, if they are skip
-                        image_b = piece_b.piece  # Gets the image from the Piece object
+                        # Go through the 4 sides of piece B
+                        for side_b in range(0, 4):
+                            # Whenever side_a is Left or Top, it will be rotated to their opposites
+                            # Whenever side_a is Right and Bottom, it will not be rotated
+                            # Whenever side_b is Right and Top, it will be rotated
+                            # Whenever side_b is Left and Top, it will not be rotated
+                            relation = Constants.get_relation(side_a, side_b)
+                            single_edge = (piece_a.index, piece_b.index, relation)
+                            # Finds how many times pieces should be rotated for mgc_ssd
+                            rotations_a, rotations_b, mgc_specific_relation, piece_swap = \
+                                Constants.get_mgc_rotation(side_a, side_b)
+                            # Rotate piece so mgc_ssd can be correctly used
+                            transformed_a = numpy.rot90(image_a, k=rotations_a)
+                            transformed_b = numpy.rot90(image_b, k=rotations_b)
+                            if piece_swap:
+                                dissimilarity = Compatibility.mgc_ssd_compatibility(transformed_b, transformed_a,
+                                                                                    mgc_specific_relation)
+                            else:
+                                dissimilarity = Compatibility.mgc_ssd_compatibility(transformed_a, transformed_b,
+                                                                                    mgc_specific_relation)
+                            # Identical to self.all_edges int his case
+                            self.important_edges.append(single_edge)
+                            self.weights[piece_a.index][piece_b.index][relation] = dissimilarity
+
+        # Normalization step
+        # TODO - Change this a bit if calculating matchlift weights
+        normalized_weights = numpy.array(self.weights)
+        for i, j, rel in self.important_edges:
+            min_weight = min(self.weights[i, :, rel].min(), self.weights[:, j, rel].min())
+            normalized_weights[i, j, rel] = self.weights[i, j, rel] / (min_weight + Constants.EPSILON)
+        self.weights = normalized_weights
+        elapsed_time = time.process_time() - t
+        print("Elapsed time for ", str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE), " pieces of 100 pixel size:",
+              elapsed_time, "s")
+
+    def get_mgc(self):
+        """
+            Calculates the MGC between all pieces
+        :return:
+        """
+        t = time.process_time()
+
+        """
+            The process of calculating the weights is performed for all 4 relations even two they are symmetric,
+            thus wasting a bit of space but that is not an issue see later
+        """
+        for piece_a in self.pieces:
+            image_a = piece_a.piece
+            for piece_b in self.pieces:
+                # Check if two pieces are the same, if they are skip the comparison
+                if piece_a != piece_b:
+                    # This loop gets the necessary 4 rotations of piece_a
+                    for side_a in range(0, 4):
+                        # Get the image from the Piece object
+                        image_b = piece_b.piece
+                        # Get the opposing side of piece b based on the side of piece a
                         side_b = Constants.get_combo_without_rotation(side_a)
+                        # Checks if the pieces need to be swapped in order for the weights to be calculated correctly
+                        # Look at Compatibility.mgc_ssd_compatibility to understand why
                         _, _, piece_swap = Constants.convert_relation(side_a, side_b)
+                        # TODO - Figure out what that was doing?
                         # rot_a, rot_b = self.get_rotation_mgc(side_a, side_b)
                         relation = Constants.get_relation(side_a, side_b)
                         single_edge = (piece_a.index, piece_b.index, relation)
                         if piece_swap:
                             dissimilarity = Compatibility.mgc_ssd_compatibility(image_b, image_a, relation)
-                            self.edges_0_4.append(single_edge)
-                            self.weights_0_4[piece_a.index, piece_b.index, relation] = dissimilarity
+                            # Add the symmetric opposing edges also
+                            self.all_edges.append(single_edge)
+                            self.weights[piece_a.index, piece_b.index, relation] = dissimilarity
                         else:
                             dissimilarity = Compatibility.mgc_ssd_compatibility(image_a, image_b, relation)
-                            self.edges_2_4.append(single_edge)
-                            self.edges_0_4.append(single_edge)
-                            self.weights_2_4[piece_a.index, piece_b.index, relation] = dissimilarity
-                            self.weights_0_4[piece_a.index, piece_b.index, relation] = dissimilarity
+                            # Add all edges, just in case they are needed
+                            self.all_edges.append(single_edge)
+                            # Add only the 2 edges between piece a and piece b, unnecessary to add symmetric edges also
+                            self.important_edges.append(single_edge)
+                            self.weights[piece_a.index, piece_b.index, relation] = dissimilarity
 
+        # TODO - Change this a bit if calculating matchlift weights
         # Normalization step
-        normalized_weights_2_4 = numpy.array(self.weights_2_4)
-        normalized_weights_0_4 = numpy.array(self.weights_0_4)
-        for i, j, rel in self.edges_2_4:
-            min_weight = min(self.weights_2_4[i, :, rel].min(), self.weights_2_4[:, j, rel].min())
-            normalized_weights_2_4[i, j, rel] = self.weights_2_4[i, j, rel] / (min_weight + Constants.EPSILON)
-        for i, j, rel in self.edges_0_4:
-            min_weight = min(self.weights_0_4[i, :, rel].min(), self.weights_0_4[:, j, rel].min())
-            normalized_weights_0_4[i, j, rel] = self.weights_0_4[i, j, rel] / (min_weight + Constants.EPSILON)
+        normalized_weights = numpy.array(self.weights)
+        for i, j, rel in self.important_edges:
+            min_weight = min(self.weights[i, :, rel].min(), self.weights[:, j, rel].min())
+            normalized_weights[i, j, rel] = self.weights[i, j, rel] / (min_weight + Constants.EPSILON)
 
-        self.weights_2_4 = normalized_weights_2_4
-        self.weights_0_4 = normalized_weights_0_4
+        self.weights = normalized_weights
 
         elapsed_time = time.process_time() - t
         print("Elapsed time for ", str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE), " pieces of 64 pixel size:",
               elapsed_time, "s")
+
+        # TODO - Decide what to do with this
         # self.optimise_weights_from_matchlift()
 
     def optimise_weights_from_matchlift(self):
         for i, j, rel in self.matchlift_edges_0_4:
             self.weights_0_4[i, j, rel] = float(0)
 
-    def save_weights_to_npy(self, root_folder, child_folder, name):
+    # Used for Known orientation
+    # Used for Unknown orientation
+    def save_weights_to_npy(self):
         """
             Saves the calculated weights into a numpy file for later use
         :return:
         :rtype:
         """
-        numpy.save(root_folder + child_folder + name + "_"
-                   + str(Constants.WIDTH_RANGE * Constants.HEIGHT_RANGE) + "_no.npy", self.weights_0_4)
-
+        if Constants.settings["puzzle_type"] == Constants.KNOWN_ORIENTATION:
+            self.get_mgc()
+            string = Constants.settings["weight"]["path_to_weight"] + str(len(self.pieces)) + "_no.npy"
+        elif Constants.settings["puzzle_type"] == Constants.UNKNOWN_ORIENTATION:
+            self.get_mgc_rotated()
+            string = Constants.settings["weight"]["path_to_weight"] + str(len(self.pieces)) + "_90.npy"
+        else:
+            raise Exception("Please specify the type of the puzzle correctly! Either \"known\" for puzzles with known "
+                            "orientation or \"unknown\" for puzzles with unknown orientation")
+        numpy.save(string, self.weights)
 
     def recalculate_weights(self, pieces_of_interest):
 
