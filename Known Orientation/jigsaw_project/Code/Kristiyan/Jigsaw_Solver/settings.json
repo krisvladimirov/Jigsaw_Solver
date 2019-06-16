@@ -1,0 +1,27 @@
+{
+  "mode" : "read",
+  "puzzle_type": "known",
+  "path_to_image" : "big_cat_4_90",
+  "name_of_image" : "big_cat",
+  "output_path" : "output/",
+  "dimensions" : {
+    "height" : 0,
+    "width": 0
+  },
+  "weight" : {
+    "perform" : "yes",
+    "path_to_weight" : "weights/big_cat_90.npy"
+  },
+  "evaluation" : {
+    "perform" : "yes",
+    "path_to_locations_for_testing" : "",
+    "path_to_neighbours_for_testing" : "",
+    "path_to_rotations_for_testing" : "",
+    "save_evaluation_to" : ""
+  },
+  "matchlift" : {
+    "perform" : "no",
+    "path_to_matchlift_data" : "",
+    "num_correspondences" : ""
+  }
+}
