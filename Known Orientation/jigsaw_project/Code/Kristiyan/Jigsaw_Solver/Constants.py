@@ -1,6 +1,6 @@
 import Chunk as Chunk
 
-READ = "read"
+SOLVE = "solve"
 WRITE = "write"
 KNOWN_ORIENTATION = "known"
 UNKNOWN_ORIENTATION = "unknown"

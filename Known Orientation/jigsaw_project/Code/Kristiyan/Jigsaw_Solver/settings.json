@@ -1,7 +1,7 @@
 {
   "mode" : "read",
   "puzzle_type": "known",
-  "path_to_image" : "big_cat_4_90",
+  "path_to_image" : "big_cat_4_90.png",
   "name_of_image" : "big_cat",
   "output_path" : "output/",
   "dimensions" : {
@@ -10,7 +10,7 @@
   },
   "weight" : {
     "perform" : "yes",
-    "path_to_weight" : "weights/big_cat_90"
+    "output_path" : ""
   },
   "evaluation" : {
     "perform" : "yes",

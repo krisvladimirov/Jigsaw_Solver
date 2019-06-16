@@ -10,6 +10,7 @@ import sys
 from operator import add
 from collections import deque
 import time
+import pathlib
 
 """
     Data type explanation:
@@ -108,7 +109,7 @@ class Solver:
 
 
 
-    def start_solving(self, extracted_pieces, dimensions, og_dimensions, weight_path=None, option=0):
+    def start_solving(self, extracted_pieces, dimensions, og_dimensions):
         """
             Option 0 - normal solving without pre-loading the weights
             Option 1 - solving with pre-loaded weights
@@ -134,22 +135,22 @@ class Solver:
 
         self.initialize_parameters()
 
-        if option == 0 or option == 3:
-            self.get_mgc()
-            self.sort_edges()
-            self.create_chunks()
-            self.find_mst()
-        elif option == 1 or option == 4:
-            self.load_weights(weight_path)
-            self.sort_edges()
-            self.create_chunks()
-            self.find_mst()
-        elif option == 6:
-            self.get_mgc()
-        elif option == 2:
-            pass
-        elif option is None:
-            print("Option is None, go to Run.py and set it!")
+        # if option == 0 or option == 3:
+        #     self.get_mgc()
+        #     self.sort_edges()
+        #     self.create_chunks()
+        #     self.find_mst()
+        # elif option == 1 or option == 4:
+        #     self.load_weights(weight_path)
+        #     self.sort_edges()
+        #     self.create_chunks()
+        #     self.find_mst()
+        # elif option == 6:
+        #     self.get_mgc()
+        # elif option == 2:
+        #     pass
+        # elif option is None:
+        #     print("Option is None, go to Run.py and set it!")
 
     def read_cycle_data(self, path_to_file, correspondence, num_of_pieces):
         """
@@ -359,6 +360,8 @@ class Solver:
 
         return cropped
 
+    # Used for Unknown orientation
+    # Used for Matchlift Unknown orientation
     def get_mgc_rotated(self):
         """
             Calculates the MGC between all pieces while taking the rotation into consideration
@@ -413,6 +416,8 @@ class Solver:
         print("Elapsed time for ", str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE), " pieces of 100 pixel size:",
               elapsed_time, "s")
 
+    # Used for Known orientation
+    # Used for Matchlift Known orientation
     def get_mgc(self):
         """
             Calculates the MGC between all pieces
@@ -483,15 +488,20 @@ class Solver:
         :return:
         :rtype:
         """
+        # Check if the directory exists
+
+        if not pathlib.Path.is_dir(Constants.settings["output_path"]):
+            raise Exception("Please specify correctly the \"output_path\" attribute of \"weights\"!")
+
         if Constants.settings["puzzle_type"] == Constants.KNOWN_ORIENTATION:
             self.get_mgc()
-            string = Constants.settings["weight"]["path_to_weight"] + str(len(self.pieces)) + "_no.npy"
+            string = Constants.settings["weight"]["output_path"] + str(len(self.pieces)) + "_no.npy"
         elif Constants.settings["puzzle_type"] == Constants.UNKNOWN_ORIENTATION:
             self.get_mgc_rotated()
-            string = Constants.settings["weight"]["path_to_weight"] + str(len(self.pieces)) + "_90.npy"
+            string = Constants.settings["weight"]["output_path"] + str(len(self.pieces)) + "_90.npy"
         else:
             raise Exception("Please specify the type of the puzzle correctly! Either \"known\" for puzzles with known "
-                            "orientation or \"unknown\" for puzzles with unknown orientation")
+                            "orientation or \"unknown\" for puzzles with unknown orientation.")
         numpy.save(string, self.weights)
 
     def recalculate_weights(self, pieces_of_interest):

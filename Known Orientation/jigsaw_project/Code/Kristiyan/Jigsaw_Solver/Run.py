@@ -123,9 +123,13 @@ def do_matchlift_weights():
 
 
 def load_puzzle():
+    """
+
+    :return:
+    """
     # Loading the image containing the puzzle
     print("Loading: ", Constants.settings["path_to_image"])
-    print("Starting extracting of pieces")
+    print("Starting extracting of pieces...")
     # Extracting the puzzle pieces
     extracted_pieces, dimensions, og_dimensions = Constants.settings["path_to_image"]
     print(str(len(extracted_pieces)), "pieces have been extracted successfully")
@@ -141,17 +145,18 @@ def load_puzzle():
         # Calculate weights and edges
         pass
 
+    return extracted_pieces, dimensions, og_dimensions
 
-def write_data(extracted_pieces, dimensions, og_dimensions):
+
+def write_data(solver):
     """
         Saves piece weights or matchlift weights
+    :param solver:
     :return:
     """
 
     # Normal weights
     if Constants.settings["weight"]["perform"] == Constants.YES:
-        # Do the pre-calculation of the weights
-        solver = Solver.Solver()
         # Check if the path exists if it doesn't create one
         solver.save_weights_to_npy()
     else:
@@ -195,20 +200,29 @@ def start():
     with open("settings.json", 'r') as read_file:
         Constants.settings = json.load(read_file)
 
-    if Constants.settings["mode"] == Constants.READ:
+    solver = Solver.Solver()
+    extracted_pieces, dimensions, og_dimensions = load_puzzle()
+    solver.start_solving(extracted_pieces,dimensions,og_dimensions)
+
+    if str.lower(Constants.settings["mode"]) == Constants.SOLVE:
         # read
         pass
+    elif str.lower(Constants.settings["mode"]) == Constants.WRITE:
+        write_data(solver)
     else:
-        # write
-        pass
+        raise Exception("Please specify the mode correctly! Either read if you want to \"solve\" a puzzle or \"write\" "
+                        "if you want to save some data, i.e. matchlift data or just puzzle weights.")
 
     # Check if there is an evaluation provided
-    if Constants.settings["evaluation"]["perform"] == Constants.YES:
+    if str.lower(Constants.settings["evaluation"]["perform"]) == Constants.YES:
         # Perform evaluation
         pass
-    else:
+    elif str.lower(Constants.settings["evaluation"]["perform"]) == Constants.NO:
         # Don't perform evaluation
         pass
+    else:
+        raise Exception("Please specify correctly the \"perform\" attribute of \"evaluation\"!. If you want to perform "
+                        "evaluation on the solved puzzle type \"yes\", if not type \"no\".")
 
 
 if __name__ == "__main__":
