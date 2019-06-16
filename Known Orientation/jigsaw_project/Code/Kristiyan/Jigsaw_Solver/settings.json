@@ -10,7 +10,7 @@
   },
   "weight" : {
     "perform" : "yes",
-    "path_to_weight" : "weights/big_cat_90.npy"
+    "path_to_weight" : "weights/big_cat_90"
   },
   "evaluation" : {
     "perform" : "yes",
