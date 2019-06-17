@@ -232,11 +232,6 @@ def ask_to_rotate(solver):
 
     print("Finished")
 
-
-
-
-
-
 def start():
     """
         Reads the json data provided by the user
