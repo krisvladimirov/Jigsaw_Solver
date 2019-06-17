@@ -6,20 +6,46 @@ class Evaluation:
     def __init__(self):
         self.original_piece_locations = []
         self.original_piece_orientation = []
+        # Index each piece and put a set which will contain the neighbours
+        self.original_piece_neighbours = []
 
-    def load_data(self, path_locations, path_rotations):
-        with open(path_locations, mode="r") as handler:
-            raw = handler.readlines()
-            for single_line in raw:
-                line = single_line.rstrip("\n")
-                y, x = line.split(",")
-                self.original_piece_locations.append((int(y), int(x)))
+    def load_data(self):
+        """
 
-        # with open(path_rotations) as handler:
-        #     raw = handler.readlines()
-        #     for single_line in raw:
-        #         rot = single_line.rsplit("\n")
-        #         self.original_piece_orientation.append(int(rot[0]))
+        :return:
+        """
+        try:
+            with open(Constants.settings["evaluation"]["path_to_locations"], mode="r") as handler:
+                raw_string = handler.readlines()
+                for single_line in raw_string:
+                    line = single_line.rstrip("\n")
+                    y, x = line.split(",")
+                    self.original_piece_locations.append((int(y), int(x)))
+        except(IOError, OSError) as e:
+            print("Could not open the file associated with the evaluation of piece placement/location! "
+                  "Check path in settings.json")
+
+        try:
+            # TODO - Decide on how this will be saved
+            with open(Constants.settings["evaluation"]["path_to_neighbours"], mode="r") as handler:
+                raw_string = handler.readlines()
+                # TODO - Decide the format
+        except (IOError, OSError) as e:
+            print("Could not open the file associated with the evaluation of piece neighbours! "
+                  "Check path in settings.json")
+
+        if Constants.settings["puzzle_type"] == Constants.KNOWN_ORIENTATION:
+            try:
+                with open(Constants.settings["evaluation"]["path_to_rotations"]) as handler:
+                    raw = handler.readlines()
+                    for single_line in raw:
+                        k_rotations = single_line.rsplit("\n")
+                        self.original_piece_orientation.append(int(k_rotations[0]))
+            except (IOError, OSError) as e:
+                print("Could not open the file associated with the evaluation of piece rotations! "
+                      "Check path in settings.json")
+        else:
+            pass
 
     def evaluate(self, where_to):
         """
@@ -28,24 +54,41 @@ class Evaluation:
         :return:
         :rtype:
         """
+
         total_number_of_pieces = Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE
+
         matched_pieces, unmatched_pieces = self.piece_evaluation()
+        matched_rotations, unmatched_rotations = self.rotation_evaluation()
 
         # First line will contain the puzzle height, puzzle width, total amount of pieces,
         # patch size (i.e. how big a puzzle piece is)
         # puzzle height and width are how many pieces there would be on each axis
         first_line = str(Constants.HEIGHT_RANGE) + "," + str(Constants.WIDTH_RANGE) + "," \
             + str(total_number_of_pieces) + "," + str(Constants.PATCH_DIMENSIONS) + "\n"
+
         # Second line will contain how many pieces are correctly placed, how many are incorrectly placed,
         # and the percentage of correctly placed pieces
         second_line = str(matched_pieces) + "," + str(unmatched_pieces) + "," \
             + str(self.round_up((matched_pieces / total_number_of_pieces) * 100, number_of_digits=1)) + "\n"
 
-        # X line will always be the piece evaluation
-        # X line will always be the rotation evaluation
+        # TODO - DO IT
+        third_line = "THE_NEIGHBOUR Ratio"
+
+        # Forth line will contain the how many pieces are correctly rotated, how many are incorrectly rotated,
+        # and the percentage of correctly rotated pieces
+        forth_line = str(matched_rotations) + "," + str(unmatched_rotations) + "," \
+            + str(self.round_up((matched_rotations / total_number_of_pieces) * 100, number_of_digits=1)) + "\n"
+
+        # 2 line will always be the piece evaluation
+        # 3 line will always be the neighbour evaluation
+        # 4 line will always be the rotation evaluation
         file = open(where_to, mode="w")
         file.write(first_line)
         file.write(second_line)
+        file.write(third_line)
+        if Constants.settings["puzzle_type"] == Constants.UNKNOWN_ORIENTATION:
+            file.write(forth_line)
+
         file.close()
 
     def piece_evaluation(self):
@@ -61,6 +104,13 @@ class Evaluation:
         # print("Location")
         # print("How many matched:", match)
         # print("How many unmatched", unmatched)
+        return match, unmatched
+
+    def neighbour_evaluation(self):
+        # TODO
+        match = 0
+        unmatched = 0
+
         return match, unmatched
 
     def rotation_evaluation(self):

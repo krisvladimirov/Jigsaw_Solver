@@ -14,9 +14,9 @@
   },
   "evaluation" : {
     "perform" : "yes",
-    "path_to_locations_for_testing" : "",
-    "path_to_neighbours_for_testing" : "",
-    "path_to_rotations_for_testing" : "",
+    "path_to_locations" : "",
+    "path_to_neighbours" : "",
+    "path_to_rotations" : "",
     "save_evaluation_to" : ""
   },
   "matchlift" : {

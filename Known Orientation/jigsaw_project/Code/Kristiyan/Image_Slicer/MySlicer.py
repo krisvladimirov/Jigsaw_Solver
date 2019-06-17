@@ -441,58 +441,71 @@ def testing():
 
 
 def main():
-    kris_dimensions = [1548, 1032, 774, 516, 344, 308, 258, 220, 150]
-    big_cat_dimensions = [960, 640, 480, 384, 320, 240, 192, 160, 136, 128]
-    greece_dimensions = [1008, 800, 756, 600, 378, 252, 216]
-    star_wars_dimensions = [720, 400, 360, 200, 180, 140, 120]
 
-    to_where_positions = "../evaluation/location/kris/"
-    to_where_puzzle = "../output/no_rotation/kris"
-    output_file_name = "kris"
-    from_where = "../input/kris.jpg"
+    dimensions = [420]
+    to_where_positions = "../evaluation/location/"
+    to_where_puzzle = "../output/"
+    output_file_name = "f1_puz"
+    from_where = "../input/f1.jpg"
     rotation = None
 
-    """ kris image """
-    for dim in kris_dimensions:
+    for dim in dimensions:
         obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
         obj.patch_slice()
         obj = None
 
-    to_where_positions = "../evaluation/location/greece/"
-    to_where_puzzle = "../output/no_rotation/greece"
-    output_file_name = "greece"
-    from_where = "../input/greece.jpg"
-    rotation = None
-
-    """ greece image """
-    for dim in greece_dimensions:
-        obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
-        obj.patch_slice()
-        obj = None
-
-    to_where_positions = "../evaluation/location/big_cat/"
-    to_where_puzzle = "../output/no_rotation/big_cat"
-    output_file_name = "big_cat"
-    from_where = "../input/cat_big.jpg"
-    rotation = None
-
-    """ big cat image"""
-    for dim in big_cat_dimensions:
-        obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
-        obj.patch_slice()
-        obj = None
-
-    to_where_positions = "../evaluation/location/star_wars/"
-    to_where_puzzle = "../output/no_rotation/star_wars"
-    output_file_name = "star_wars"
-    from_where = "../input/star_wars.png"
-    rotation = None
-
-    """ star wars image """
-    for dim in star_wars_dimensions:
-        obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
-        obj.patch_slice()
-        obj = None
+    # kris_dimensions = [1548, 1032, 774, 516, 344, 308, 258, 220, 150]
+    # big_cat_dimensions = [960, 640, 480, 384, 320, 240, 192, 160, 136, 128]
+    # greece_dimensions = [1008, 800, 756, 600, 378, 252, 216]
+    # star_wars_dimensions = [720, 400, 360, 200, 180, 140, 120]
+    #
+    # to_where_positions = "../evaluation/location/kris/"
+    # to_where_puzzle = "../output/no_rotation/kris"
+    # output_file_name = "kris"
+    # from_where = "../input/kris.jpg"
+    # rotation = None
+    #
+    # """ kris image """
+    # for dim in kris_dimensions:
+    #     obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
+    #     obj.patch_slice()
+    #     obj = None
+    #
+    # to_where_positions = "../evaluation/location/greece/"
+    # to_where_puzzle = "../output/no_rotation/greece"
+    # output_file_name = "greece"
+    # from_where = "../input/greece.jpg"
+    # rotation = None
+    #
+    # """ greece image """
+    # for dim in greece_dimensions:
+    #     obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
+    #     obj.patch_slice()
+    #     obj = None
+    #
+    # to_where_positions = "../evaluation/location/big_cat/"
+    # to_where_puzzle = "../output/no_rotation/big_cat"
+    # output_file_name = "big_cat"
+    # from_where = "../input/cat_big.jpg"
+    # rotation = None
+    #
+    # """ big cat image"""
+    # for dim in big_cat_dimensions:
+    #     obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
+    #     obj.patch_slice()
+    #     obj = None
+    #
+    # to_where_positions = "../evaluation/location/star_wars/"
+    # to_where_puzzle = "../output/no_rotation/star_wars"
+    # output_file_name = "star_wars"
+    # from_where = "../input/star_wars.png"
+    # rotation = None
+    #
+    # """ star wars image """
+    # for dim in star_wars_dimensions:
+    #     obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
+    #     obj.patch_slice()
+    #     obj = None
 
 
 if __name__ == "__main__":

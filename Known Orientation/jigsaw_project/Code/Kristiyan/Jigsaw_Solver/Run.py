@@ -1,5 +1,6 @@
 import argparse
 import os
+import cv2 as openCV
 import Detector as Detector
 import Solver as Solver
 import json
@@ -177,6 +178,65 @@ def write_data(solver):
               "but \"weight\" perform is \"yes\".\nCheck the settings.json if a mistake was made\n")
 
 
+def perform_evaluation():
+    """
+        Function enforcing puzzle evaluation after it has been created
+    :return:
+    """
+    print("Evaluation process commence...")
+    ev = Evaluation.Evaluation()
+    ev.load_data()
+    ev.evaluate()
+    ev.piece_evaluation()
+
+
+def ask_to_rotate(solver):
+    """
+
+    :param solver:
+    :type solver:
+    :return:
+    :rtype:
+    """
+    actions = {"No", "Yes", "no", "yes"}
+    actions_1 = {"Yes", "yes"}
+    performed_action = "No"
+    print("")
+    height, width, _ = solver.solution.shape
+    resized = openCV.resize(solver.solution, (int(width * 0.4), int(height * 0.4)), interpolation=openCV.INTER_AREA)
+    openCV.imshow("Solved", resized)
+    openCV.waitKey(0)
+    openCV.destroyAllWindows()
+    while performed_action in actions:
+        performed_action = input("Would you like to rotate the image: Yes/No/Exit\nYour choice: ")
+        while performed_action in actions_1:
+            print("[ 1 -> rotate by 90 degrees, 2 -> rotate by 180 degrees, 3 -> rotate by 270 degrees ]")
+            rotate_by_how_much = input("By how much: ")
+            if rotate_by_how_much.isdigit():
+                if int(rotate_by_how_much) > 3 or int(rotate_by_how_much) < 1:
+                    print("Not in the specified range, try again or type No to stop")
+                else:
+                    print("Rotating by:", rotate_by_how_much)
+                    # solver.solution = numpy.rot90(solver.solution, k=int(rotate_by_how_much))
+                    solver.rotate_after_completion(int(rotate_by_how_much))
+                    height, width, _ = solver.solution.shape
+                    resized = openCV.resize(solver.solution, (int(width * 0.4), int(height * 0.4)),
+                                            interpolation=openCV.INTER_AREA)
+                    openCV.imshow("Solved and rotated by: " + rotate_by_how_much, resized)
+                    openCV.waitKey(0)
+                    openCV.destroyAllWindows()
+                    performed_action = input("If you want to rotate it again: Yes; No to stop\nYour choice: ")
+            else:
+                performed_action = "No"
+        performed_action = "exit"
+
+    print("Finished")
+
+
+
+
+
+
 def start():
     """
         Reads the json data provided by the user
@@ -202,10 +262,10 @@ def start():
 
     solver = Solver.Solver()
     extracted_pieces, dimensions, og_dimensions = load_puzzle()
-    solver.start_solving(extracted_pieces,dimensions,og_dimensions)
+    solver.start_solving(extracted_pieces, dimensions, og_dimensions)
 
     if str.lower(Constants.settings["mode"]) == Constants.SOLVE:
-        # read
+        # TODO - Read
         pass
     elif str.lower(Constants.settings["mode"]) == Constants.WRITE:
         write_data(solver)
@@ -215,8 +275,8 @@ def start():
 
     # Check if there is an evaluation provided
     if str.lower(Constants.settings["evaluation"]["perform"]) == Constants.YES:
-        # Perform evaluation
-        pass
+        # TODO - Evaluation
+        perform_evaluation()
     elif str.lower(Constants.settings["evaluation"]["perform"]) == Constants.NO:
         # Don't perform evaluation
         pass
