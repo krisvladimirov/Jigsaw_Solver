@@ -734,13 +734,13 @@ class Solver:
             Constants.WIDTH_RANGE = int(sqrt_piece_count)
             Constants.HEIGHT_RANGE = int(sqrt_piece_count)
             self.initial_positions = numpy.full((int(sqrt_piece_count), int(sqrt_piece_count)),
-                                                fill_value=Constants.VALUE_INITIALIZER, dtype="int8")
+                                                fill_value=Constants.VALUE_INITIALIZER, dtype="uint16")
 
         else:
             # If the puzzle is not symmetric we get the factors
             self.get_factors(len(self.pieces))
             self.initial_positions = numpy.full((Constants.WIDTH_RANGE, Constants.HEIGHT_RANGE),
-                                                fill_value=Constants.VALUE_INITIALIZER, dtype="int8")
+                                                fill_value=Constants.VALUE_INITIALIZER, dtype="uint16")
 
         # Doing it the lazy way
         for i in range(0, Constants.WIDTH_RANGE):

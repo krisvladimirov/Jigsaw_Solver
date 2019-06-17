@@ -60,29 +60,63 @@ class Slicer:
         :rtype:
         """
         # number_of_slices = actual amount of slices on the y and x axis
-        coordinate = []
+        # number_of_slices[0] - y_axis
+        # number_of_slices[1] - x_axis
         resized_image, final_image, number_of_slices = self.check_dimensions()
+        coordinate = {}
+        neighbours = [[] for i in range(number_of_slices[0] * number_of_slices[1])]
         y_axis, x_axis = Slicer.get_gap_points(resized_image.shape, number_of_slices)
         piece_index = 0
+        counter = 0
+
+        # 2D array storing where exactly each index is in 2d space
+        initial_positions = numpy.full((number_of_slices[1], number_of_slices[0]), fill_value=-1, dtype="int16")
+        for i in range(0, number_of_slices[1]):
+            for j in range(0, number_of_slices[0]):
+                initial_positions[i][j] = counter
+                counter = counter + 1
+        initial_positions = numpy.rot90(initial_positions)
+
+        for i in range(3):
+            for j in range(2):
+                print(initial_positions[j][i])
+
         x = 0
         y = number_of_slices[0] - 1
         # A bit of spaghetti code when saving the original values but it works
+        # Iterates over the x axis
         for i in range(len(x_axis)):
+            # Iterates over the y_axis
             x_point = x_axis[i]
             for j in range(len(y_axis)):
                 y_point = y_axis[j]
-                # Corrected it to be on the resized image, I think I had it wrong on the self.input_image
-                sliced = resized_image[y_point[0]:y_point[1], x_point[0]:x_point[1]]
-                # openCV.imshow("sliced", sliced)
+                # Obtain a puzzle piece from processed original image
+                puzzle_piece = resized_image[y_point[0]:y_point[1], x_point[0]:x_point[1]]
+                # openCV.imshow("Sliced puzzle piece", puzzle_piece)
                 # openCV.waitKey(0)
                 # openCV.destroyAllWindows()
-                self.sliced_images.append(sliced)
-                # Adding to dict
-                coordinate.append((y, x))
+                self.sliced_images.append(puzzle_piece)
+                # Compute the ground truth coordinate of a piece
+                coordinate[piece_index] = (y, x)
+                # Find the neighbours of this piece
+                # Go on a 3x3 kernel
+                # Width loop
+
+                for ii in range(i-1, i+2):
+                    # Height loop (backwards one)
+                    for jj in range(y+1, y-2, -1):
+                        if not ((ii < 0 or ii > number_of_slices[1]) or
+                                (jj < 0 or jj > number_of_slices[0])):
+                            # Distance
+                            is_it_neighbour = abs((i + j) - (ii + jj))
+                            if is_it_neighbour == 1:
+                                neighbours[piece_index].append(initial_positions[jj][ii])
+
                 piece_index = piece_index + 1
                 y = y - 1
 
             x = x + 1
+            # Number of slices on the y axis, basic indexing
             y = number_of_slices[0] - 1
 
         if self.angle is None:
@@ -252,7 +286,7 @@ class Slicer:
         :param slices:
         :type slices:
         :param coordinate:
-        :type coordinate:
+        :type coordinate: dict
         :param rotations:
         :type rotations:
         :return:
@@ -297,14 +331,14 @@ class Slicer:
 
         # Shuffle the indexes of the sliced images
         list_of_indexes = deque(range(range_for_i * range_for_j))
+
         random.shuffle(list_of_indexes)
 
-        # Shuffles the image slices inside the deque (Randomly)
-        # random.shuffle(sliced_images)
 
         # Save piece locations to txt
         for i in list_of_indexes:
             y, x = coordinate[i]
+            # TODO - Find neightbours and where they have been moved
             to_write = str(y) + "," + str(x) + "\n"
             file_locations.write(to_write)
 
@@ -424,7 +458,7 @@ class Slicer:
         return y_axis, x_axis
 
 
-def testing():
+def rotate_image():
     """
     For now it would only be working with +- 90 degree change in angle
     :return:
@@ -442,17 +476,16 @@ def testing():
 
 def main():
 
-    dimensions = [420]
-    to_where_positions = "../evaluation/location/"
+    to_where_positions = "../ground_truth_"
     to_where_puzzle = "../output/"
-    output_file_name = "f1_puz"
-    from_where = "../input/f1.jpg"
+    output_file_name = "cat"
+    from_where = "../input/cat.jpeg"
     rotation = None
+    dim = 270
 
-    for dim in dimensions:
-        obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
-        obj.patch_slice()
-        obj = None
+    obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
+    obj.patch_slice()
+    obj = None
 
     # kris_dimensions = [1548, 1032, 774, 516, 344, 308, 258, 220, 150]
     # big_cat_dimensions = [960, 640, 480, 384, 320, 240, 192, 160, 136, 128]
