@@ -64,6 +64,7 @@ class Slicer:
         self.angle = rotation
         self.patch_size = patch_size
         self.sliced_images = deque([])
+        self.initial_positions = None
 
     def patch_slice(self):
         """
@@ -85,12 +86,12 @@ class Slicer:
         counter = 0
         # 2D array storing where exactly each index is in 2d space
         # Keep track of initial positions so we could find all neighbours of a piece
-        initial_positions = numpy.full((number_of_slices[1], number_of_slices[0]), fill_value=-1, dtype="int16")
+        self.initial_positions = numpy.full((number_of_slices[1], number_of_slices[0]), fill_value=-1, dtype="int16")
         for i in range(0, number_of_slices[1]):
             for j in range(0, number_of_slices[0]):
-                initial_positions[i][j] = counter
+                self.initial_positions[i][j] = counter
                 counter = counter + 1
-        initial_positions = numpy.rot90(initial_positions)
+        self.initial_positions = numpy.rot90(self.initial_positions)
 
         #
         piece_index = 0
@@ -112,7 +113,7 @@ class Slicer:
                         if not ((xx < 0 or xx > len(x_axis) - 1) or (yy < 0 or yy > len(y_axis) - 1)):
                             is_it_neighbour = abs((y + x) - (yy + xx))
                             if is_it_neighbour == 1:
-                                neighbours[piece_index].append(initial_positions[yy][xx])
+                                neighbours[piece_index].append(self.initial_positions[yy][xx])
                         else:
                             # Out of bound exception prevented
                             pass
@@ -330,7 +331,7 @@ class Slicer:
             self.neighbours + self.output_file_name + "_" + str(range_for_y * range_for_x) + "_no.txt", mode="w")
 
         # Initialize piece indexes
-        list_of_indexes = deque(range(range_for_y * range_for_x))
+        list_of_indexes = [i for i in range(range_for_y * range_for_x)]
         # Shuffle the indexes, thus shuffle the position of each piece
         random.shuffle(list_of_indexes)
 
@@ -346,10 +347,12 @@ class Slicer:
 
         for piece_i in list_of_indexes:
             for i in range(0, len(neighbours[piece_i]), 1):
+                neighbour_of_piece_i = neighbours[piece_i][i]
+                actual_neighbour = list_of_indexes.index(neighbour_of_piece_i)
                 if i == len(neighbours[piece_i]) - 1:
-                    to_write = str(neighbours[piece_i][i]) + "\n"
+                    to_write = str(actual_neighbour) + "\n"
                 else:
-                    to_write = str(neighbours[piece_i][i]) + ", "
+                    to_write = str(actual_neighbour) + ", "
                 file_neighbours.write(to_write)
 
         # Close file containing all neighbours
@@ -386,7 +389,8 @@ class Slicer:
                 y2 = ending_point_y     - ((y + 1) * slice_spacing)
                 x1 = starting_point_x   + ((x + 1) * slice_spacing)
                 x2 = ending_point_x     + ((x + 1) * slice_spacing)
-                index = list_of_indexes.popleft()
+                # Gets first element
+                index = list_of_indexes.pop(0)
                 image_to_write[y1:y2, x1:x2] = transformed_images[index]
 
                 ending_point_y = starting_point_y
@@ -505,7 +509,7 @@ def main():
     output_file_name = "cat"
     from_where = "../input/cat.jpeg"
     rotation = None
-    dim = 120
+    dim = 270
 
     obj = Slicer(to_where_positions, to_where_neighbours, to_where_rotations, to_where_puzzle, output_file_name,
                  from_where, rotation, dim)
