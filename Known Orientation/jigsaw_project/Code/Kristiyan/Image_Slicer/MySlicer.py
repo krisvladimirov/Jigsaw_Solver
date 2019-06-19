@@ -505,7 +505,7 @@ def main():
     output_file_name = "cat"
     from_where = "../input/cat.jpeg"
     rotation = None
-    dim = 270
+    dim = 120
 
     obj = Slicer(to_where_positions, to_where_neighbours, to_where_rotations, to_where_puzzle, output_file_name,
                  from_where, rotation, dim)

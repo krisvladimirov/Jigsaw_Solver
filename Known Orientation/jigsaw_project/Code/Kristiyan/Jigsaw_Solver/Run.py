@@ -132,11 +132,11 @@ def load_puzzle():
     print("Loading: ", Constants.settings["path_to_image"])
     print("Starting extracting of pieces...")
     # Extracting the puzzle pieces
-    extracted_pieces, dimensions, og_dimensions = Constants.settings["path_to_image"]
+    extracted_pieces, dimensions, og_dimensions = Detector.main(Constants.settings["path_to_image"])
     print(str(len(extracted_pieces)), "pieces have been extracted successfully")
 
     # Check if their are existing weights present
-    if Constants.settings["path_to_weight"] != Constants.EMPTY_PATH:
+    if Constants.settings["weight"]["path_to_weights"] != Constants.EMPTY_PATH:
         # TODO - Check if the paths are correct
         # Load the weights
         # Calculate the edges between the weights
@@ -159,24 +159,26 @@ def write_data(solver):
     # Normal weights
     if str.lower(Constants.settings["weight"]["perform"]) == Constants.YES:
         # Check if the path exists if it doesn't create one
+        print("Preparing the solver for MGC weight calculation...")
         solver.save_weights_to_npy()
+        print("Weights were computed.")
     elif str.lower(Constants.settings["weight"]["perform"]) != Constants.NO \
             or str.lower(Constants.settings["weight"]["perform"]) != Constants.YES:
         print("Did not pre-calculate weights, \"mode\" == write "
-              "but \"weight\" perform is \"yes\".\nCheck the settings.json if a mistake was made\n")
+              "but \"weight\" perform is \"no\".\nCheck the settings.json if a mistake was made\n")
 
     # Matchlift
     if str.lower(Constants.settings["matchlift"]["perform"]) == Constants.YES:
         # Do the calculation of the matchlift
         print("Preparing solver for MatchLift...")
-        solver = Solver.Solver()
-        print("Solver computing correspondences for Matchlift...")
+        solver.get_mgc_matchlift()
+        print("Matchlift correspondences were computed.")
 
-        solver = None
     elif str.lower(Constants.settings["matchlift"]["perform"]) != Constants.NO \
-            or str.lower(str.lower(Constants.settings["matchlift"]["perform"]) != Constants.YES):
+            or str.lower(Constants.settings["matchlift"]["perform"]) != Constants.YES:
         print("Did not calculate correspondences for matchlift, \"mode\" == write "
-              "but \"weight\" perform is \"yes\".\nCheck the settings.json if a mistake was made\n")
+              "but \"matchlift\" perform is \"yes\".\nCheck the settings.json if a mistake was made\n")
+
 
 def perform_evaluation():
     """
@@ -257,17 +259,28 @@ def start():
 
     solver = Solver.Solver()
     extracted_pieces, dimensions, og_dimensions = load_puzzle()
-    solver.start_solving(extracted_pieces, dimensions, og_dimensions)
+    solver.prepare_solver(extracted_pieces, dimensions, og_dimensions)
 
     # Solving a puzzle
     if str.lower(Constants.settings["mode"]) == Constants.SOLVE:
-        if str.lower(Constants.settings[""]):
+        # Check if weights are provided
+        if str.lower(Constants.settings["weight"]["path_to_weights"]) != Constants.EMPTY_PATH:
+            # Load weights for the solver
+            solver.load_weights()
+        else:
+            # Computes weights
+            solver.get_mgc()
+
+        # Check if matchlift data has been provided
+        if str.lower(Constants.settings["weight"]["path_to_matchlift_data"]) != Constants.EMPTY_PATH:
+            # Load matchlift data for the optimizer
+            solver.load_matchlift_data()
+        else:
             pass
-        solver.prepare_solver(extracted_pieces, dimensions, og_dimensions)
-        solver.get_mgc()
+
+        # TODO - Matchlift optimizer
         solver.sort_edges()
         solver.find_mst()
-
     # Writing some data, i.e. weights matchlift
     elif str.lower(Constants.settings["mode"]) == Constants.WRITE:
         write_data(solver)
@@ -278,12 +291,11 @@ def start():
     # Check if there is an evaluation provided
     # Perform evaluation if it is provided
     if str.lower(Constants.settings["evaluation"]["perform"]) == Constants.YES:
-        # TODO - Evaluation
         perform_evaluation()
-    # Don't perform anything skip
-    elif str.lower(Constants.settings["evaluation"]["perform"]) == Constants.NO:
-        pass
-    else:
+    # Crashesh for some reason
+    elif str.lower(Constants.settings["evaluation"]["perform"]) != Constants.NO \
+            and str.lower(Constants.settings["evaluation"]["perform"]) != Constants.YES:
+        print(Constants.settings["evaluation"]["perform"])
         raise Exception("Please specify correctly the \"perform\" attribute of \"evaluation\"!. If you want to perform "
                         "evaluation on the solved puzzle type \"yes\", if not type \"no\".")
 

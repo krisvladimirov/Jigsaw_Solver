@@ -1,28 +1,29 @@
 {
-  "mode" : "read",
+  "mode" : "write",
   "puzzle_type": "known",
-  "path_to_image" : "big_cat_4_90.png",
-  "name_of_image" : "big_cat",
-  "output_path" : "output/",
-  "path_to_weights": "",
+  "path_to_image" : "../output/cat_40_no.png",
+  "name_of_image" : "cat",
+  "output_path" : "",
   "dimensions" : {
     "height" : 0,
     "width": 0
   },
   "weight" : {
-    "perform" : "yes",
+    "perform" : "no",
+    "path_to_weights": "",
     "output_path" : ""
   },
   "evaluation" : {
-    "perform" : "yes",
+    "perform" : "no",
     "path_to_positions" : "",
     "path_to_neighbours" : "",
     "path_to_rotations" : "",
     "save_evaluation_to" : ""
   },
   "matchlift" : {
-    "perform" : "no",
-    "path_to_matchlift_data" : "",
-    "num_correspondences" : ""
+    "perform" : "yes",
+    "path_to_matchlift_data": "",
+    "output_path" : "",
+    "num_correspondences" : 2
   }
 }
