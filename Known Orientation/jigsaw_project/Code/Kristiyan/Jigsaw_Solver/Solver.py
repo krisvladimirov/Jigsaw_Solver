@@ -170,32 +170,39 @@ class Solver:
                 storage.append(val[0])
         self.save_matchlift_weights(storage, num_of_pieces, correspondence)
 
-    def load_weights(self, path):
-        self.weights_0_4 = numpy.load(path)
+    def load_weights(self):
+        """
+
+        :return:
+        :rtype:
+        """
+        # Check if the path exists first
+        if not pathlib.Path.exists(Constants.settings["path_to_weights"]):
+            raise Exception("Please specify correctly the \"output_path\" attribute of \"weights\"!")
+
+        self.weights = numpy.load(Constants.settings["path_to_weights"])
+
         for piece_a in self.pieces:
-            image_a = piece_a.piece
             for piece_b in self.pieces:
-                # This loops gets the necessary 4 rotations of piece_a
+                # Check if two pieces are the same, if they are skip the comparison
                 if piece_a != piece_b:
-                    # for side_a in range(0, 4):
+                    # This loops gets the necessary 4 rotations of piece_a
                     for side_a in range(0, 4):
-                        # Check if two pieces are the same, if they are skip
-                        image_b = piece_b.piece  # Gets the image from the Piece object
+                        # Get the opposing side of piece b based on the side of piece a
                         side_b = Constants.get_combo_without_rotation(side_a)
+                        # Checks if the pieces need to be swapped in order for the weights to be calculated correctly
                         _, _, piece_swap = Constants.convert_relation(side_a, side_b)
                         # rot_a, rot_b = self.get_rotation_mgc(side_a, side_b)
                         relation = Constants.get_relation(side_a, side_b)
                         single_edge = (piece_a.index, piece_b.index, relation)
                         if piece_swap:
-                            # dissimilarity = Compatibility.mgc_ssd_compatibility(image_b, image_a, relation)
-                            self.edges_0_4.append(single_edge)
-                            # self.weights_0_4[piece_a.index, piece_b.index, relation] = dissimilarity
+                            # Add the symmetric opposing edges also
+                            self.all_edges.append(single_edge)
                         else:
-                            # dissimilarity = Compatibility.mgc_ssd_compatibility(image_a, image_b, relation)
-                            self.edges_2_4.append(single_edge)
-                            self.edges_0_4.append(single_edge)
-                            # self.weights_2_4[piece_a.index, piece_b.index, relation] = dissimilarity
-                            # self.weights_0_4[piece_a.index, piece_b.index, relation] = dissimilarity
+                            # Add all edges, just in case they are needed
+                            self.all_edges.append(single_edge)
+                            # Add only the 2 edges between piece a and piece b, unnecessary to add symmetric edges also
+                            self.important_edges.append(single_edge)
 
     def save_matchlift_weights(self, storage, num_of_pieces, num_correspondences):
         """
@@ -486,6 +493,10 @@ class Solver:
         :return:
         :rtype:
         """
+
+        # Compute MGC
+        self.get_mgc()
+
         # Check if the directory exists
 
         if not pathlib.Path.is_dir(Constants.settings["output_path"]):
