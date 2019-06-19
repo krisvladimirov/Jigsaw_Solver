@@ -150,7 +150,7 @@ class Solver:
         # elif option is None:
         #     print("Option is None, go to Run.py and set it!")
 
-    def read_cycle_data(self, path_to_file, correspondence, num_of_pieces):
+    def load_matchlift_data(self, path_to_file, correspondence, num_of_pieces):
         """
 
         :param path_to_file:
@@ -177,10 +177,10 @@ class Solver:
         :rtype:
         """
         # Check if the path exists first
-        if not pathlib.Path.exists(Constants.settings["path_to_weights"]):
+        if not pathlib.Path.exists(Constants.settings["weight"]["path_to_weights"]):
             raise Exception("Please specify correctly the \"output_path\" attribute of \"weights\"!")
 
-        self.weights = numpy.load(Constants.settings["path_to_weights"])
+        self.weights = numpy.load(Constants.settings["weight"]["path_to_weights"])
 
         for piece_a in self.pieces:
             for piece_b in self.pieces:
