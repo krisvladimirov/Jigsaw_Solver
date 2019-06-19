@@ -66,14 +66,21 @@ class Evaluation:
 
         matched_pieces, unmatched_pieces = self.piece_evaluation()
         correct_neighbours, incorrect_neighbours = self.neighbour_evaluation()
-        matched_rotations, unmatched_rotations = self.rotation_evaluation()
+        rotation_info = None
+        if Constants.settings["puzzle_type"] == Constants.UNKNOWN_ORIENTATION:
+            matched_rotations, unmatched_rotations = self.rotation_evaluation()
+            # Forth line will contain the how many pieces are correctly rotated, how many are incorrectly rotated,
+            # and the percentage of correctly rotated pieces
+            rotation_info = "Piece rotation (correct/incorrect):" + str(matched_rotations) + " / " + str(
+                unmatched_rotations) + "\nRatio of correctly rotated pieces to total number of pieces: " + str(
+                self.round_up((matched_rotations / total_number_of_pieces) * 100, number_of_digits=1)) + "\n"
         total_number_of_neighbours = correct_neighbours + incorrect_neighbours
 
         # Puzzle info will contain the puzzle height, puzzle width, total amount of pieces,
         # patch size (i.e. how big a puzzle piece is)
         # puzzle height and width are how many pieces there would be on each axis
         puzzle_info = "Puzzle height (in pieces): " + str(Constants.HEIGHT_RANGE) + "\nPuzzle width (in pieces): " \
-            + str(Constants.WIDTH_RANGE) + "\nPuzzle piece size (in pixels): " + Constants.PATCH_DIMENSIONS \
+            + str(Constants.WIDTH_RANGE) + "\nPuzzle piece size (in pixels): " + str(Constants.PATCH_DIMENSIONS) \
             + "\nTotal number of pieces: " + str(total_number_of_pieces) + "\n"
 
         # Position info will contain how many pieces are correctly placed, how many are incorrectly placed,
@@ -87,11 +94,6 @@ class Evaluation:
         neighbour_info = "Neighbour placement (correct/incorrect): " + str(correct_neighbours) + " / " + str(
             incorrect_neighbours) + "\nRatio of correctly neighbours to total number of neighbours: " + str(
             self.round_up((correct_neighbours / total_number_of_neighbours) * 100, number_of_digits=1)) + "\n"
-
-        # Forth line will contain the how many pieces are correctly rotated, how many are incorrectly rotated,
-        # and the percentage of correctly rotated pieces
-        rotation_info = str(matched_rotations) + "," + str(unmatched_rotations) + "," \
-            + str(self.round_up((matched_rotations / total_number_of_pieces) * 100, number_of_digits=1)) + "\n"
 
         # 2 line will always be the piece evaluation
         # 3 line will always be the neighbour evaluation
@@ -137,9 +139,9 @@ class Evaluation:
             # Find the location/coordinates/position of piece i in the biggest assembled chunk
             y, x = Constants.BIGGEST_CHUNK.piece_coordinates[key]
             # Iterate over the 3x3 region, where piece i is in the center of this region
-            for xx in range(y - 1, y - 2, 1):
-                for yy in range(x - 1, x + 2, 1):
-                    if not ((xx < 0 or xx > Constants.WIDTH_RANGE) or (yy < 0 or yy > Constants.HEIGHT_RANGE)):
+            for yy in range(y - 1, y + 2, 1):
+                for xx in range(x - 1, x + 2, 1):
+                    if not ((xx < 0 or xx > Constants.WIDTH_RANGE - 1) or (yy < 0 or yy > Constants.HEIGHT_RANGE - 1)):
                         # Grab the neighbouring piece index located at (yy, xx) from the solved chunk
                         possible_neighbour = matrix_chunk[yy][xx]
                         # Compare with the ground truth to see if it is an actual neighbour

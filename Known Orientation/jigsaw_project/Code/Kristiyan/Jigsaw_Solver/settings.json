@@ -14,11 +14,11 @@
     "output_path" : ""
   },
   "evaluation" : {
-    "perform" : "no",
-    "path_to_positions" : "",
-    "path_to_neighbours" : "",
-    "path_to_rotations" : "",
-    "save_evaluation_to" : ""
+    "perform" : "yes",
+    "path_to_positions" : "../ground_truth/positions/cat_40_no.txt",
+    "path_to_neighbours" : "../ground_truth/neighbours/cat_40_no.txt",
+    "path_to_rotations" : "../",
+    "save_evaluation_to" : "cat.txt"
   },
   "matchlift" : {
     "perform" : "yes",
