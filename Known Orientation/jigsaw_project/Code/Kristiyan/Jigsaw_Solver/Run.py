@@ -272,14 +272,14 @@ def start():
             solver.get_mgc()
 
         # Check if matchlift data has been provided
-        if str.lower(Constants.settings["weight"]["path_to_matchlift_data"]) != Constants.EMPTY_PATH:
+        if str.lower(Constants.settings["matchlift"]["path_to_matchlift_data"]) != Constants.EMPTY_PATH:
             # Load matchlift data for the optimizer
             solver.load_matchlift_data()
         else:
             pass
 
         # TODO - Matchlift optimizer
-        solver.sort_edges()
+        solver.create_chunks()
         solver.find_mst()
     # Writing some data, i.e. weights matchlift
     elif str.lower(Constants.settings["mode"]) == Constants.WRITE:

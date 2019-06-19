@@ -39,16 +39,8 @@ class Solver:
         # Hold all edges
         self.all_edges = []
         self.important_edges = []
-
-        # TODO - Old variables to be corrected
-        # Stores all 4 relations between 2 pieces
-        self.weights_0_4 = []
-        # Stores only half of the relations between 2 pieces
-        self.weights_2_4 = []
-        self.edges_2_4 = []
-        self.edges_0_4 = []
         self.pieces = []
-        self.sides = []
+        # self.sides = []
         self.minimum_spanning_tree = []
 
         """
@@ -68,7 +60,6 @@ class Solver:
         """
         self.rotations = []
 
-        self.solution = 0
         self.comparison = []
         self.new_minimal_spanning_tree = []
         # Sets to keep track of the how the MST's are formed
@@ -126,29 +117,11 @@ class Solver:
             single_piece = Piece.Piece(extracted_pieces[i], i)
             self.pieces.append(single_piece)
             # piece_sides = single_piece.initialize_sides()
-            # self.add_sides(piece_sides, i)
 
         # TODO - Remove this
         self.initialize_positions_rotations()
 
         self.initialize_parameters()
-
-        # if option == 0 or option == 3:
-        #     self.get_mgc()
-        #     self.sort_edges()
-        #     self.create_chunks()
-        #     self.find_mst()
-        # elif option == 1 or option == 4:
-        #     self.load_weights(weight_path)
-        #     self.sort_edges()
-        #     self.create_chunks()
-        #     self.find_mst()
-        # elif option == 6:
-        #     self.get_mgc()
-        # elif option == 2:
-        #     pass
-        # elif option is None:
-        #     print("Option is None, go to Run.py and set it!")
 
     def load_matchlift_data(self, path_to_file, correspondence, num_of_pieces):
         """
@@ -237,18 +210,7 @@ class Solver:
         # Sorting the weights and edges
         # self.matchlift_edges_0_4.sort(key=lambda x: self.matchlift_weights_0_4[x], reverse=True)
 
-    def add_sides(self, piece_sides, index):
-        """
-            Namespace
-        :param piece_sides:
-        :param index:
-        :return:
-        """
-        for side_object in piece_sides:
-            single_side = (side_object, index)
-            self.sides.append(single_side)
-
-    # Fixed for non rotated pieces
+    # TODO - Fixed for non rotated pieces
     def initialize_parameters(self):
         """
             Initializes the array in which we are going to store all the weight as well as the matrix in which we will
@@ -532,8 +494,8 @@ class Solver:
             This is done so Kruskal's algorithm can be applied
         :return:
         """
-        self.edges_0_4.sort(key=lambda x: self.weights_0_4[x])
-        self.edges_2_4.sort(key=lambda x: self.weights_2_4[x])
+        self.important_edges.sort(key=lambda x: self.weights[x])
+        self.all_edges.sort(key=lambda x: self.weights[x])
 
     def find_mst(self):
         """
@@ -548,7 +510,7 @@ class Solver:
             self.sort_edges()
             self.kruskal_alg()
             self.get_biggest_chunk()
-            # TODO - get the pieces from the smaller chunks
+            # Get the pieces from the smaller chunks
             # TODO - What are refused pieces ?
             refused_pieces = self.get_pieces_without_a_place()
             if not refused_pieces \
@@ -621,38 +583,42 @@ class Solver:
             chunk = Chunk.Chunk(i)
             self.chunks.append(chunk)
 
-    # TODO -  Checked!
+    # TODO - To be further updated for Unknown orientation
     def kruskal_alg(self):
         """
             Implementation of Kruskal's algorithm for finding the minimum spanning tree
+            This is not a pure implementation of the algorithm, it is modified for the needs of the program
         :return: None
         :type: None
         """
         unsuccessful_merges = set()
         end_index = 0
         up_to = len(self.pieces) - 1  # We need V -1 edges for the minimal spanning tree
-        for u_vertex, v_vertex, relation in self.edges_0_4:
+        for u_vertex, v_vertex, relation in self.important_edges:
             self.steps = self.steps + 1
             if end_index < up_to:
-                weight = self.weights_0_4[u_vertex, v_vertex, relation]
+                weight = self.weights[u_vertex, v_vertex, relation]
                 u = self.find_parent(parent=self.parent_set, i=u_vertex)
                 v = self.find_parent(parent=self.parent_set, i=v_vertex)
-                # Removes cycles from the 'graph'
+                # Omits the formation of cycles
                 if u != v:
+                    #
                     u_tree = self.trees[u]
                     v_tree = self.trees[v]
 
+                    # The sides of the pieces making the connection
                     side_a, side_b = Constants.get_reverse_combo(relation)
                     _, _, piece_swap = Constants.convert_relation(side_a, side_b)
-                    # TODO - Check if the relation of the pieces has to be converted, if it does then we should just
-                    # look at the correct indices
+
                     evaluation = False  # Get the chunks we are working with
                     chunk_u = self.chunks[u]
                     chunk_v = self.chunks[v]
+
                     if piece_swap:
                         evaluation = chunk_v.add(v_vertex, u_vertex, side_b, side_a, chunk_u)
                     else:
                         evaluation = chunk_u.add(u_vertex, v_vertex, side_a, side_b, chunk_v)
+
                     if not evaluation:
                         if piece_swap:
                             united = v_tree.union(u_tree)
@@ -662,7 +628,6 @@ class Solver:
                             self.trees[u] = None
                             self.chunks[u] = None
                             self.parent_set[u] = v
-                            self.get_prediction(chunk_v)
                         else:
                             united = u_tree.union(v_tree)
                             self.trees[u] = united
@@ -671,7 +636,6 @@ class Solver:
                             self.trees[v] = None
                             self.chunks[v] = None
                             self.parent_set[v] = u
-                            self.get_prediction(chunk_u)
 
                         # TODO - Account for swapping or maybe not?
                         self.new_minimal_spanning_tree.append((u_vertex, v_vertex, relation, weight))
@@ -689,29 +653,6 @@ class Solver:
                 # MST is fully constructed we can exit the loop
                 # Could probably go on and find all cycles inside the graph?
                 break
-
-    def get_prediction(self, chunk):
-        """
-
-        :param chunk:
-        :type chunk: Chunk.Chunk
-        :return:
-        :rtype:
-        """
-        image = numpy.zeros((Constants.PATCH_DIMENSIONS * chunk.current_height,
-                               Constants.PATCH_DIMENSIONS * chunk.current_width,
-                               Constants.COLOUR_CHANNELS), dtype="uint8")
-
-        # image = numpy.empty(shape=(chunk.current_height, chunk.current_width, 3), dtype="uint8")
-        if chunk.current_width * chunk.current_height == len(chunk.piece_coordinates.keys()):
-            for key in chunk.piece_coordinates.keys():
-                y, x = chunk.piece_coordinates[key]
-                y0 = y * Constants.PATCH_DIMENSIONS
-                x0 = x * Constants.PATCH_DIMENSIONS
-                y1 = y0 + Constants.PATCH_DIMENSIONS
-                x1 = x0 + Constants.PATCH_DIMENSIONS
-
-                image[y0:y1, x0:x1] = self.pieces[key].piece
 
     def find_parent(self, parent, i):
         if parent[i] == i:
@@ -812,10 +753,8 @@ class Solver:
             x1 = x0 + Constants.PATCH_DIMENSIONS
 
             solution[y0:y1, x0:x1] = self.pieces[key].piece
-            # self.solution[y0:y1, x0:x1] = self.pieces[key].piece
-            # Iterate over the dictionary
 
-        openCV.imwrite(Constants.settings["output_path"] + "_" + Constants.settings["name_of_image"] + "_"
+        openCV.imwrite(Constants.settings["output_path"] + Constants.settings["name_of_image"] + "_"
                        + str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE) + str(self.steps) + "_no.png", solution)
 
         # file = open("test.txt", mode="w")

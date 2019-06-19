@@ -1,5 +1,5 @@
 {
-  "mode" : "write",
+  "mode" : "solve",
   "puzzle_type": "known",
   "path_to_image" : "../output/cat_40_no.png",
   "name_of_image" : "cat",
