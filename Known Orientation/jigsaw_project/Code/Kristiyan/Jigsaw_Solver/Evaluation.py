@@ -28,14 +28,16 @@ class Evaluation:
                   "Check path in settings.json")
 
         try:
-            # TODO - Doing now
             with open(Constants.settings["evaluation"]["path_to_neighbours"], mode="r") as handler:
                 raw_string = handler.readlines()
                 for single_line in raw_string:
                     line = single_line.rstrip("\n")
                     list_of_neighbours = line.split(",")
-                    for i in range(len(list_of_neighbours)):
-                        self.original_piece_neighbours[i].add(list_of_neighbours[i])
+                    piece_index = 0
+                    for neighbour in list_of_neighbours:
+                        self.original_piece_neighbours[piece_index].add(int(neighbour))
+                        counter = counter + 1
+                    piece_index += 1
         except (IOError, OSError) as e:
             print("Could not open the file associated with the evaluation of piece neighbours! "
                   "Check path in settings.json")
