@@ -30,14 +30,17 @@ class Evaluation:
         try:
             with open(Constants.settings["evaluation"]["path_to_neighbours"], mode="r") as handler:
                 raw_string = handler.readlines()
+                piece_index = 0
+                counter = 0
                 for single_line in raw_string:
                     line = single_line.rstrip("\n")
                     list_of_neighbours = line.split(",")
-                    piece_index = 0
                     for neighbour in list_of_neighbours:
                         self.original_piece_neighbours[piece_index].add(int(neighbour))
                         counter = counter + 1
                     piece_index += 1
+
+                print(counter)
         except (IOError, OSError) as e:
             print("Could not open the file associated with the evaluation of piece neighbours! "
                   "Check path in settings.json")
@@ -146,11 +149,16 @@ class Evaluation:
                     if not ((xx < 0 or xx > Constants.WIDTH_RANGE - 1) or (yy < 0 or yy > Constants.HEIGHT_RANGE - 1)):
                         # Grab the neighbouring piece index located at (yy, xx) from the solved chunk
                         possible_neighbour = matrix_chunk[yy][xx]
-                        # Compare with the ground truth to see if it is an actual neighbour
-                        if possible_neighbour in self.original_piece_neighbours[key]:
-                            match += 1
-                        else:
-                            unmatched += 1
+                        # Compute to see if it 1 unit away from a piece we are looking at
+                        # If it is more than one we do not consider it a neighbour, i.e. cases where is diagonally
+                        # placed to another one
+                        distance = abs((y + x) - (yy + xx))
+                        if distance == 1:
+                            # Compare with the ground truth to see if it is an actual neighbour
+                            if possible_neighbour in self.original_piece_neighbours[key]:
+                                match += 1
+                            else:
+                                unmatched += 1
 
         return match, unmatched
 

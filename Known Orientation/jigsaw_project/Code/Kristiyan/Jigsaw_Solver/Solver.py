@@ -755,7 +755,8 @@ class Solver:
             solution[y0:y1, x0:x1] = self.pieces[key].piece
 
         openCV.imwrite(Constants.settings["output_path"] + Constants.settings["name_of_image"] + "_"
-                       + str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE) + str(self.steps) + "_no.png", solution)
+                       + str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE) + "_"
+                       + str(self.steps) + "_no.png", solution)
 
         # file = open("test.txt", mode="w")
         # for i in range(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE):
