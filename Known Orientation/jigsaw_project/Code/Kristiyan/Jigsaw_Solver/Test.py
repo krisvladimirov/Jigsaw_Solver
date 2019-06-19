@@ -11,7 +11,6 @@ from functools import reduce
 from collections import deque
 from operator import sub
 from scipy.io import loadmat
-import tables
 import h5py
 
 
@@ -20,6 +19,44 @@ import h5py
     Three ways to read by PyTables, or with Scipy.io import loadmat, or with h5py
     Using h5py
 """
+
+
+# counter = 0
+# t = numpy.zeros((3, 4), dtype="int8")
+# for x in range(4):
+#     for y in range(3 - 1, -1, -1):
+#         t[y][x] = counter
+#         counter = counter + 1
+#
+# print(t)
+arr = [
+    ['c', 'f', 'i', 'l'],
+    ['b', 'e', 'h', 'k'],
+    ['a', 'd', 'g', 'j']
+]
+#
+# # From right to left, row by row
+# for y in range(3):
+#     for x in range(3, -1, -1):
+#         print(arr[y][x], end=", ")
+#     print("")
+# print("")
+#
+# # From top to bottom, column by column
+# for x in range(4):
+#     for y in range(3):
+#         print(arr[y][x], end=", ")
+#     print("")
+# print("")
+#
+# # From bottom to top, column by column
+# for x in range(4):
+#     for y in range(2, -1, -1):
+#         print(arr[y][x], end=", ")
+#     print("")
+
+for i in range(0, len(arr[0]), 1):
+    print(i)
 
 
 # def read_cycle_data(path_to_file, how_many_correspondences):
@@ -36,10 +73,10 @@ import h5py
 #     return storage
 # s = read_cycle_data('matching.mat', 1)
 
-img = openCV.imread("../output/no_rotation/big_cat_36_no.png")
-openCV.imshow("", img)
-openCV.waitKey(0)
-openCV.destroyAllWindows()
+# img = openCV.imread("../output/no_rotation/big_cat_36_no.png")
+# openCV.imshow("", img)
+# openCV.waitKey(0)
+# openCV.destroyAllWindows()
 
 # file = h5py.File("matching.mat")
 # matching_group = file["matching"]

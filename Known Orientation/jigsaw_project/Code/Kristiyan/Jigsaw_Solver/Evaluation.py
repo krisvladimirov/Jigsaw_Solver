@@ -7,7 +7,8 @@ class Evaluation:
         self.original_piece_locations = []
         self.original_piece_orientation = []
         # Index each piece and put a set which will contain the neighbours
-        self.original_piece_neighbours = []
+        # TODO - Update how WIDTH and HEIGHT are calculated (based on paper) and what I have written in my dissertation
+        self.original_piece_neighbours = [set() for f in range(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE)]
 
     def load_data(self):
         """
@@ -15,27 +16,33 @@ class Evaluation:
         :return:
         """
         try:
-            with open(Constants.settings["evaluation"]["path_to_locations"], mode="r") as handler:
+            # Read data associated with positions
+            with open(Constants.settings["evaluation"]["path_to_positions"], mode="r") as handler:
                 raw_string = handler.readlines()
                 for single_line in raw_string:
                     line = single_line.rstrip("\n")
                     y, x = line.split(",")
                     self.original_piece_locations.append((int(y), int(x)))
         except(IOError, OSError) as e:
-            print("Could not open the file associated with the evaluation of piece placement/location! "
+            print("Could not open the file associated with the evaluation of piece position/location! "
                   "Check path in settings.json")
 
         try:
-            # TODO - Decide on how this will be saved
+            # TODO - Doing now
             with open(Constants.settings["evaluation"]["path_to_neighbours"], mode="r") as handler:
                 raw_string = handler.readlines()
-                # TODO - Decide the format
+                for single_line in raw_string:
+                    line = single_line.rstrip("\n")
+                    list_of_neighbours = line.split(",")
+                    for i in range(len(list_of_neighbours)):
+                        self.original_piece_neighbours[i].add(list_of_neighbours[i])
         except (IOError, OSError) as e:
             print("Could not open the file associated with the evaluation of piece neighbours! "
                   "Check path in settings.json")
 
-        if Constants.settings["puzzle_type"] == Constants.KNOWN_ORIENTATION:
+        if Constants.settings["puzzle_type"] == Constants.UNKNOWN_ORIENTATION:
             try:
+                # Read data associated with rotations if unknown orientaito
                 with open(Constants.settings["evaluation"]["path_to_rotations"]) as handler:
                     raw = handler.readlines()
                     for single_line in raw:
@@ -45,12 +52,12 @@ class Evaluation:
                 print("Could not open the file associated with the evaluation of piece rotations! "
                       "Check path in settings.json")
         else:
+            # Known orientation skip this step
             pass
 
-    def evaluate(self, where_to):
+    def evaluate(self):
         """
-        :param where_to:
-        :type where_to:
+
         :return:
         :rtype:
         """
@@ -58,40 +65,52 @@ class Evaluation:
         total_number_of_pieces = Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE
 
         matched_pieces, unmatched_pieces = self.piece_evaluation()
+        correct_neighbours, incorrect_neighbours = self.neighbour_evaluation()
         matched_rotations, unmatched_rotations = self.rotation_evaluation()
+        total_number_of_neighbours = correct_neighbours + incorrect_neighbours
 
-        # First line will contain the puzzle height, puzzle width, total amount of pieces,
+        # Puzzle info will contain the puzzle height, puzzle width, total amount of pieces,
         # patch size (i.e. how big a puzzle piece is)
         # puzzle height and width are how many pieces there would be on each axis
-        first_line = str(Constants.HEIGHT_RANGE) + "," + str(Constants.WIDTH_RANGE) + "," \
-            + str(total_number_of_pieces) + "," + str(Constants.PATCH_DIMENSIONS) + "\n"
+        puzzle_info = "Puzzle height (in pieces): " + str(Constants.HEIGHT_RANGE) + "\nPuzzle width (in pieces): " \
+            + str(Constants.WIDTH_RANGE) + "\nPuzzle piece size (in pixels): " + Constants.PATCH_DIMENSIONS \
+            + "\nTotal number of pieces: " + str(total_number_of_pieces) + "\n"
 
-        # Second line will contain how many pieces are correctly placed, how many are incorrectly placed,
+        # Position info will contain how many pieces are correctly placed, how many are incorrectly placed,
         # and the percentage of correctly placed pieces
-        second_line = str(matched_pieces) + "," + str(unmatched_pieces) + "," \
+        position_info = "Piece placement (correct/incorrect): " + str(matched_pieces) + " / " + str(unmatched_pieces) \
+            + "\nRatio of correctly placed to total number: " \
             + str(self.round_up((matched_pieces / total_number_of_pieces) * 100, number_of_digits=1)) + "\n"
 
-        # TODO - DO IT
-        third_line = "THE_NEIGHBOUR Ratio"
+        # Neighbour info will contain how many pieces have their correct neighbour, how many have an incorrect neighbour
+        # and the percentage of correct neighbours placements
+        neighbour_info = "Neighbour placement (correct/incorrect): " + str(correct_neighbours) + " / " + str(
+            incorrect_neighbours) + "\nRatio of correctly neighbours to total number of neighbours: " + str(
+            self.round_up((correct_neighbours / total_number_of_neighbours) * 100, number_of_digits=1)) + "\n"
 
         # Forth line will contain the how many pieces are correctly rotated, how many are incorrectly rotated,
         # and the percentage of correctly rotated pieces
-        forth_line = str(matched_rotations) + "," + str(unmatched_rotations) + "," \
+        rotation_info = str(matched_rotations) + "," + str(unmatched_rotations) + "," \
             + str(self.round_up((matched_rotations / total_number_of_pieces) * 100, number_of_digits=1)) + "\n"
 
         # 2 line will always be the piece evaluation
         # 3 line will always be the neighbour evaluation
         # 4 line will always be the rotation evaluation
-        file = open(where_to, mode="w")
-        file.write(first_line)
-        file.write(second_line)
-        file.write(third_line)
+        file = open(Constants.settings["evaluation"]["save_evaluation_to"], mode="w")
+        file.write(puzzle_info)
+        file.write(position_info)
+        file.write(neighbour_info)
         if Constants.settings["puzzle_type"] == Constants.UNKNOWN_ORIENTATION:
-            file.write(forth_line)
+            file.write(rotation_info)
 
         file.close()
 
     def piece_evaluation(self):
+        """
+
+        :return:
+        :rtype:
+        """
         positions = Constants.BIGGEST_CHUNK.piece_coordinates
         match = 0
         unmatched = 0
@@ -101,19 +120,42 @@ class Evaluation:
             else:
                 unmatched += 1
 
-        # print("Location")
-        # print("How many matched:", match)
-        # print("How many unmatched", unmatched)
         return match, unmatched
 
     def neighbour_evaluation(self):
-        # TODO
+        """
+
+        :return:
+        :rtype:
+        """
+        matrix_chunk = Constants.BIGGEST_CHUNK.chunk
         match = 0
         unmatched = 0
+
+        # For every piece starting from 0
+        for key in range(len(self.original_piece_neighbours)):
+            # Find the location/coordinates/position of piece i in the biggest assembled chunk
+            y, x = Constants.BIGGEST_CHUNK.piece_coordinates[key]
+            # Iterate over the 3x3 region, where piece i is in the center of this region
+            for xx in range(y - 1, y - 2, 1):
+                for yy in range(x - 1, x + 2, 1):
+                    if not ((xx < 0 or xx > Constants.WIDTH_RANGE) or (yy < 0 or yy > Constants.HEIGHT_RANGE)):
+                        # Grab the neighbouring piece index located at (yy, xx) from the solved chunk
+                        possible_neighbour = matrix_chunk[yy][xx]
+                        # Compare with the ground truth to see if it is an actual neighbour
+                        if possible_neighbour in self.original_piece_neighbours[key]:
+                            match += 1
+                        else:
+                            unmatched += 1
 
         return match, unmatched
 
     def rotation_evaluation(self):
+        """
+
+        :return:
+        :rtype:
+        """
         rotations = Chunk.Chunk.global_piece_rotations
         match = 0
         unmatched = 0
@@ -123,13 +165,18 @@ class Evaluation:
             else:
                 unmatched += 1
 
-        # print("")
-        # print("Orientation")
-        # print("How many matched:", match)
-        # print("How many unmatched", unmatched)
         return match, unmatched
 
     def round_up(self, number, number_of_digits=1):
+        """
+
+        :param number:
+        :type number:
+        :param number_of_digits:
+        :type number_of_digits:
+        :return:
+        :rtype:
+        """
         # start by just rounding the number, as sometimes this rounds it up
         result = round(number, number_of_digits if number_of_digits else 0)
         if result < number:

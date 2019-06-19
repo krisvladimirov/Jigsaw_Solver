@@ -15,17 +15,10 @@ from collections import deque
                         -> It is due to not giving the center point properly check function for clarification
      STATUS : WORKING   3. Rotational slices of an image
      STATUS : WORKING   4. Patch making
-     STATUS : ONGOING   5. Final test
+     STATUS : DONE   5. Final test
 """
-
 """
     OpenCV is BGR
-"""
-
-"""
-    I have commented almost every part of the code.
-    There might be some confusion when reading, but since I am not a native English speaker
-
 """
 
 # How many slices to be made by default
@@ -34,22 +27,41 @@ default_slice_value = 4
 # Slice spacing in pixels
 slice_spacing = 10
 
+# Used for test results (Dissertation)
 downscaling_y = 0.5
 downscaling_x = 0.5
 
-"""
-"""
-
 
 class Slicer:
-    def __init__(self, file_write_name_positions, puzzle_location, output_file_name,
-                 file_read_name, angle, patch_size):
+    def __init__(self, file_write_name_positions, file_write_name_neighbours, file_write_name_rotations,
+                 puzzle_location, output_file_name, file_read_name, rotation, patch_size):
+        """
+
+        :param file_write_name_positions: The location where ground truth piece positions will be saved
+        :type file_write_name_positions: str
+        :param file_write_name_neighbours: The location where ground truth neighbours will be saved
+        :type file_write_name_neighbours: str
+        :param file_write_name_rotations: The location where ground truth rotations will be saved
+        :type file_write_name_rotations: str
+        :param puzzle_location: The location where puzzles will be saved
+        :type puzzle_location: str
+        :param output_file_name: How the file will be called upon saving
+        :type output_file_name: str
+        :param file_read_name: The image we are creating a puzzle from
+        :type file_read_name: str
+        :param rotation:
+        :type rotation:
+        :param patch_size: Size of the square puzzle piece in pixels
+        :type patch_size: int
+        """
         self.location = file_write_name_positions
+        self.neighbours = file_write_name_neighbours
+        self.rotations = file_write_name_rotations
         self.puzzle_location = puzzle_location
         self.output_file_name = output_file_name
         self.input_image = openCV.imread(file_read_name)
         assert self.input_image is not None, "Please supply correct path to image!"
-        self.angle = angle
+        self.angle = rotation
         self.patch_size = patch_size
         self.sliced_images = deque([])
 
@@ -63,13 +75,16 @@ class Slicer:
         # number_of_slices[0] - y_axis
         # number_of_slices[1] - x_axis
         resized_image, final_image, number_of_slices = self.check_dimensions()
+        # Stores the coordinates of each piece i.e. piece : (y, x)
         coordinate = {}
+        # 2D matrix to store all neighbours of a piece
         neighbours = [[] for i in range(number_of_slices[0] * number_of_slices[1])]
         y_axis, x_axis = Slicer.get_gap_points(resized_image.shape, number_of_slices)
-        piece_index = 0
-        counter = 0
 
+        # Used to populate initial positions
+        counter = 0
         # 2D array storing where exactly each index is in 2d space
+        # Keep track of initial positions so we could find all neighbours of a piece
         initial_positions = numpy.full((number_of_slices[1], number_of_slices[0]), fill_value=-1, dtype="int16")
         for i in range(0, number_of_slices[1]):
             for j in range(0, number_of_slices[0]):
@@ -77,19 +92,13 @@ class Slicer:
                 counter = counter + 1
         initial_positions = numpy.rot90(initial_positions)
 
-        for i in range(3):
-            for j in range(2):
-                print(initial_positions[j][i])
-
-        x = 0
-        y = number_of_slices[0] - 1
-        # A bit of spaghetti code when saving the original values but it works
-        # Iterates over the x axis
-        for i in range(len(x_axis)):
-            # Iterates over the y_axis
-            x_point = x_axis[i]
-            for j in range(len(y_axis)):
-                y_point = y_axis[j]
+        #
+        piece_index = 0
+        for x in range(len(x_axis)):
+            x_point = x_axis[x]
+            # TODO - This loop has to go in reverse
+            for y in range(len(y_axis) - 1, -1, -1):
+                y_point = y_axis[y]
                 # Obtain a puzzle piece from processed original image
                 puzzle_piece = resized_image[y_point[0]:y_point[1], x_point[0]:x_point[1]]
                 # openCV.imshow("Sliced puzzle piece", puzzle_piece)
@@ -98,36 +107,27 @@ class Slicer:
                 self.sliced_images.append(puzzle_piece)
                 # Compute the ground truth coordinate of a piece
                 coordinate[piece_index] = (y, x)
-                # Find the neighbours of this piece
-                # Go on a 3x3 kernel
-                # Width loop
-
-                for ii in range(i-1, i+2):
-                    # Height loop (backwards one)
-                    for jj in range(y+1, y-2, -1):
-                        if not ((ii < 0 or ii > number_of_slices[1]) or
-                                (jj < 0 or jj > number_of_slices[0])):
-                            # Distance
-                            is_it_neighbour = abs((i + j) - (ii + jj))
+                for xx in range(x - 1, x + 2, 1):
+                    for yy in range(y - 1, y + 2, 1):
+                        if not ((xx < 0 or xx > len(x_axis) - 1) or (yy < 0 or yy > len(y_axis) - 1)):
+                            is_it_neighbour = abs((y + x) - (yy + xx))
                             if is_it_neighbour == 1:
-                                neighbours[piece_index].append(initial_positions[jj][ii])
+                                neighbours[piece_index].append(initial_positions[yy][xx])
+                        else:
+                            # Out of bound exception prevented
+                            pass
 
                 piece_index = piece_index + 1
-                y = y - 1
-
-            x = x + 1
-            # Number of slices on the y axis, basic indexing
-            y = number_of_slices[0] - 1
 
         if self.angle is None:
             # number_of_slices = actual amount of slices on the y and x axis
-            self.save(final_image, list(self.sliced_images), number_of_slices, coordinate)
+            self.save(final_image, list(self.sliced_images), number_of_slices, coordinate, neighbours)
         elif self.angle == 90 or self.angle is "random":
             # We already have the final image dimensions with the rotated patches
             sliced_and_rotated, rotations_by_piece = self.slice_rotational(None, self.angle)
-            self.save(final_image, list(sliced_and_rotated), number_of_slices, coordinate, rotations_by_piece)
+            self.save(final_image, list(sliced_and_rotated), number_of_slices, coordinate, neighbours,
+                      rotations_by_piece)
 
-        # location = "../output/rotated/test" + str(number_of_slices[0] * number_of_slices[1]) + "_90" + ".png"
         if self.angle is None:
             st = self.puzzle_location + "/" + self.output_file_name + "_" + str(
                 number_of_slices[0] * number_of_slices[1]) \
@@ -138,7 +138,7 @@ class Slicer:
                  + "_" + str(self.angle) + ".png"
 
         openCV.imwrite(st, final_image)
-        print("Saved at:", self.location)
+        print("Saved at:", self.puzzle_location)
 
     def check_dimensions(self):
         """
@@ -276,7 +276,7 @@ class Slicer:
         rotated = openCV.warpAffine(image, matrix, (new_width, new_height), borderValue=(255, 255, 255))
         return rotated
 
-    def save(self, image_to_write, transformed_images, slices, coordinate, rotations=None):
+    def save(self, image_to_write, transformed_images, slices, coordinate, neighbours, rotations=None):
         """
 
         :param image_to_write:
@@ -286,16 +286,20 @@ class Slicer:
         :param slices:
         :type slices:
         :param coordinate:
-        :type coordinate: dict
+        :type coordinate:
+        :param neighbours:
+        :type neighbours:
         :param rotations:
         :type rotations:
         :return:
         :rtype:
         """
-        # "*********************************"
+
+        # Save single piece puzzles, uncomment if needed
+        # *********************************
         # for i in range(len(sliced_images)):
         #     openCV.imwrite("../output/puzzle/" + str(i) + ".png", sliced_images[i])
-        # "*********************************"
+        # *********************************
 
         img_height, _, _ = image_to_write.shape
 
@@ -314,38 +318,58 @@ class Slicer:
         right_ending_point_x = 0
 
         if type(slices) is tuple:
-            range_for_i = slices[0]
-            range_for_j = slices[1]
+            range_for_y = slices[0]
+            range_for_x = slices[1]
         else:
-            range_for_i = int(math.sqrt(slices))
-            range_for_j = int(math.sqrt(slices))
+            range_for_y = int(math.sqrt(slices))
+            range_for_x = int(math.sqrt(slices))
 
-        file_locations = open(self.location + self.output_file_name + "_" + str(range_for_i * range_for_j) + "_no.txt", mode="w")
+        file_locations = open(
+            self.location + self.output_file_name + "_" + str(range_for_y * range_for_x) + "_no.txt", mode="w")
+        file_neighbours = open(
+            self.neighbours + self.output_file_name + "_" + str(range_for_y * range_for_x) + "_no.txt", mode="w")
 
-        print("Locations saved at:", self.location)
-
-        # for i in range(len(sliced_images)):
-        #     openCV.imshow("im: " + str(i), sliced_images[i])
-        #     openCV.waitKey(0)
-        #     openCV.destroyAllWindows()
-
-        # Shuffle the indexes of the sliced images
-        list_of_indexes = deque(range(range_for_i * range_for_j))
-
+        # Initialize piece indexes
+        list_of_indexes = deque(range(range_for_y * range_for_x))
+        # Shuffle the indexes, thus shuffle the position of each piece
         random.shuffle(list_of_indexes)
 
-
-        # Save piece locations to txt
+        # Save piece positions to txt
         for i in list_of_indexes:
             y, x = coordinate[i]
-            # TODO - Find neightbours and where they have been moved
             to_write = str(y) + "," + str(x) + "\n"
             file_locations.write(to_write)
 
+        # Close file containing all positions
         file_locations.close()
+        print("Locations saved at:", self.location)
 
-        for j in range(range_for_j):
-            for i in range(range_for_i):
+        for piece_i in list_of_indexes:
+            for i in range(0, len(neighbours[piece_i]), 1):
+                if i == len(neighbours[piece_i]) - 1:
+                    to_write = str(neighbours[piece_i][i]) + "\n"
+                else:
+                    to_write = str(neighbours[piece_i][i]) + ", "
+                file_neighbours.write(to_write)
+
+        # Close file containing all neighbours
+        file_neighbours.close()
+        print("Neighbours saved at:", self.neighbours)
+
+        # Save piece rotations to txt
+        if rotations is not None:
+            file_rotations = open(
+                self.rotations + self.output_file_name + "_" + str(range_for_y * range_for_x) + "_no.txt", mode="w")
+            for i in list_of_indexes:
+                rot = rotations[i]
+                to_write = str(rot) + "\n"
+                file_rotations.write(to_write)
+            # Close file containing all rotations
+            file_rotations.close()
+        print("Rotations saved at:", self.rotations)
+
+        for x in range(range_for_x):
+            for y in range(range_for_y):
 
                 # Acquires the height and width of the sliced image which is next in line
                 height = Slicer.peek(transformed_images, 0)
@@ -358,10 +382,10 @@ class Slicer:
                 if right_ending_point_x < ending_point_x:
                     right_ending_point_x = ending_point_x
 
-                y1 = starting_point_y - ((i + 1) * slice_spacing)
-                y2 = ending_point_y - ((i + 1) * slice_spacing)
-                x1 = starting_point_x + ((j + 1) * slice_spacing)
-                x2 = ending_point_x + ((j + 1) * slice_spacing)
+                y1 = starting_point_y   - ((y + 1) * slice_spacing)
+                y2 = ending_point_y     - ((y + 1) * slice_spacing)
+                x1 = starting_point_x   + ((x + 1) * slice_spacing)
+                x2 = ending_point_x     + ((x + 1) * slice_spacing)
                 index = list_of_indexes.popleft()
                 image_to_write[y1:y2, x1:x2] = transformed_images[index]
 
@@ -449,9 +473,6 @@ class Slicer:
             # Assign the width interval to x_gap
             x_gap += width_interval
 
-        # Reverse the y_axis points so we could go from bottom to top when traversing and cutting the pieces
-        y_axis.reverse()
-
         # For testing purposes
         print("Y points", y_axis)
         print("X points", x_axis, end="\n\n")
@@ -476,67 +497,35 @@ def rotate_image():
 
 def main():
 
-    to_where_positions = "../ground_truth_"
+    # Change parameters if needed
+    to_where_positions = "../ground_truth/positions/"
+    to_where_neighbours = "../ground_truth/neighbours/"
+    to_where_rotations = "../ground_truth/rotations/"
     to_where_puzzle = "../output/"
     output_file_name = "cat"
     from_where = "../input/cat.jpeg"
     rotation = None
     dim = 270
 
-    obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
+    obj = Slicer(to_where_positions, to_where_neighbours, to_where_rotations, to_where_puzzle, output_file_name,
+                 from_where, rotation, dim)
     obj.patch_slice()
     obj = None
 
-    # kris_dimensions = [1548, 1032, 774, 516, 344, 308, 258, 220, 150]
-    # big_cat_dimensions = [960, 640, 480, 384, 320, 240, 192, 160, 136, 128]
-    # greece_dimensions = [1008, 800, 756, 600, 378, 252, 216]
-    # star_wars_dimensions = [720, 400, 360, 200, 180, 140, 120]
-    #
-    # to_where_positions = "../evaluation/location/kris/"
-    # to_where_puzzle = "../output/no_rotation/kris"
-    # output_file_name = "kris"
-    # from_where = "../input/kris.jpg"
+    """
+        To create puzzles of different sizes of an image uncomment bellow 
+    """
+    # to_where_positions = "../ground_truth/"
+    # to_where_neighbours = "../ground_truth/"
+    # to_where_rotations = "../ground_truth/"
+    # to_where_puzzle = "../output/"
+    # output_file_name = "cat"
+    # from_where = "../input/cat.jpeg"
     # rotation = None
-    #
-    # """ kris image """
-    # for dim in kris_dimensions:
-    #     obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
-    #     obj.patch_slice()
-    #     obj = None
-    #
-    # to_where_positions = "../evaluation/location/greece/"
-    # to_where_puzzle = "../output/no_rotation/greece"
-    # output_file_name = "greece"
-    # from_where = "../input/greece.jpg"
-    # rotation = None
-    #
-    # """ greece image """
-    # for dim in greece_dimensions:
-    #     obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
-    #     obj.patch_slice()
-    #     obj = None
-    #
-    # to_where_positions = "../evaluation/location/big_cat/"
-    # to_where_puzzle = "../output/no_rotation/big_cat"
-    # output_file_name = "big_cat"
-    # from_where = "../input/cat_big.jpg"
-    # rotation = None
-    #
-    # """ big cat image"""
-    # for dim in big_cat_dimensions:
-    #     obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
-    #     obj.patch_slice()
-    #     obj = None
-    #
-    # to_where_positions = "../evaluation/location/star_wars/"
-    # to_where_puzzle = "../output/no_rotation/star_wars"
-    # output_file_name = "star_wars"
-    # from_where = "../input/star_wars.png"
-    # rotation = None
-    #
-    # """ star wars image """
-    # for dim in star_wars_dimensions:
-    #     obj = Slicer(to_where_positions, to_where_puzzle, output_file_name, from_where, rotation, dim)
+    # dimensions = [100, 200, 300, 400]
+    # for dim in dimensions:
+    #     obj = Slicer(to_where_positions, to_where_neighbours, to_where_rotations, to_where_puzzle, output_file_name,
+    #                  from_where, rotation, dim)
     #     obj.patch_slice()
     #     obj = None
 

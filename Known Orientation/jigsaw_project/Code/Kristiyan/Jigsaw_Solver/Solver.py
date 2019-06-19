@@ -82,7 +82,7 @@ class Solver:
         self.matchlift_weights_0_4 = None
         self.matchlift_edges_0_4 = []
 
-    def test(self, extracted_pieces, dimensions, og_dimensions):
+    def prepare_solver(self, extracted_pieces, dimensions, og_dimensions):
         """
 
         :param extracted_pieces:
@@ -103,11 +103,9 @@ class Solver:
             # TODO - Why am I doing it in two places???
             self.pieces.append(single_piece)
 
+        # TODO - To be removed as it violates the out-of-boundary condition
+        self.initialize_positions_rotations()
         self.initialize_parameters()
-
-
-
-
 
     def start_solving(self, extracted_pieces, dimensions, og_dimensions):
         """
@@ -818,13 +816,13 @@ class Solver:
         openCV.imwrite("../solved/big_cat_" + str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE) + "_mgc_" + str(self.steps)
                        + "_no.png", solution)
 
-        file = open("test.txt", mode="w")
-        for i in range(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE):
-            for j in range(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE):
-                for rel in range(16):
-                    weight = self.weights_0_4[i][j][rel]
-                    if rel == Constants.RIGHT_LEFT or rel == Constants.LEFT_RIGHT or rel == Constants.BOTTOM_TOP or rel == Constants.TOP_BOTTOM:
-                        file.write(str(weight) + "\n")
+        # file = open("test.txt", mode="w")
+        # for i in range(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE):
+        #     for j in range(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE):
+        #         for rel in range(16):
+        #             weight = self.weights_0_4[i][j][rel]
+        #             if rel == Constants.RIGHT_LEFT or rel == Constants.LEFT_RIGHT or rel == Constants.BOTTOM_TOP or rel == Constants.TOP_BOTTOM:
+        #                 file.write(str(weight) + "\n")
 
     def get_biggest_chunk(self):
         """

@@ -358,7 +358,7 @@ class Chunk:
         :return:
         """
         self.chunk = numpy.full((self.current_height, self.current_width), fill_value=Constants.VALUE_INITIALIZER,
-                               dtype="int16")
+                                dtype="int16")
 
     def update_chunk(self):
         """

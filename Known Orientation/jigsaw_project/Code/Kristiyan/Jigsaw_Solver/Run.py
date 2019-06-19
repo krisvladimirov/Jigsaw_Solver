@@ -157,26 +157,26 @@ def write_data(solver):
     """
 
     # Normal weights
-    if Constants.settings["weight"]["perform"] == Constants.YES:
+    if str.lower(Constants.settings["weight"]["perform"]) == Constants.YES:
         # Check if the path exists if it doesn't create one
         solver.save_weights_to_npy()
-    else:
+    elif str.lower(Constants.settings["weight"]["perform"]) != Constants.NO \
+            or str.lower(Constants.settings["weight"]["perform"]) != Constants.YES:
         print("Did not pre-calculate weights, \"mode\" == write "
               "but \"weight\" perform is \"yes\".\nCheck the settings.json if a mistake was made\n")
 
     # Matchlift
-    if Constants.settings["matchlift"]["perform"] == Constants.YES:
+    if str.lower(Constants.settings["matchlift"]["perform"]) == Constants.YES:
         # Do the calculation of the matchlift
         print("Preparing solver for MatchLift...")
         solver = Solver.Solver()
         print("Solver computing correspondences for Matchlift...")
 
-
         solver = None
-    else:
+    elif str.lower(Constants.settings["matchlift"]["perform"]) != Constants.NO \
+            or str.lower(str.lower(Constants.settings["matchlift"]["perform"]) != Constants.YES):
         print("Did not calculate correspondences for matchlift, \"mode\" == write "
               "but \"weight\" perform is \"yes\".\nCheck the settings.json if a mistake was made\n")
-
 
 def perform_evaluation():
     """
@@ -242,7 +242,7 @@ def start():
         4. The name of the image -> how the processed image will be saved as
         5. The output path to the processed image -> where it will be saved
         6. Path to any pre-calculated weights (Optional)
-        7. Path to the correct locations of the puzzle -> for evaluation purposes
+        7. Path to the correct positions of the puzzle -> for evaluation purposes
         8. Path to the correct neighbours of the puzzle -> for evaluation purposes
         9. Path to the correct rotations of the puzzle -> for evaluation purposes
         10. Path to where the evaluation will be saved
@@ -259,9 +259,16 @@ def start():
     extracted_pieces, dimensions, og_dimensions = load_puzzle()
     solver.start_solving(extracted_pieces, dimensions, og_dimensions)
 
+    # Solving a puzzle
     if str.lower(Constants.settings["mode"]) == Constants.SOLVE:
-        # TODO - Read
-        pass
+        if str.lower(Constants.settings[""]):
+            pass
+        solver.prepare_solver(extracted_pieces, dimensions, og_dimensions)
+        solver.get_mgc()
+        solver.sort_edges()
+        solver.find_mst()
+
+    # Writing some data, i.e. weights matchlift
     elif str.lower(Constants.settings["mode"]) == Constants.WRITE:
         write_data(solver)
     else:
@@ -269,11 +276,12 @@ def start():
                         "if you want to save some data, i.e. matchlift data or just puzzle weights.")
 
     # Check if there is an evaluation provided
+    # Perform evaluation if it is provided
     if str.lower(Constants.settings["evaluation"]["perform"]) == Constants.YES:
         # TODO - Evaluation
         perform_evaluation()
+    # Don't perform anything skip
     elif str.lower(Constants.settings["evaluation"]["perform"]) == Constants.NO:
-        # Don't perform evaluation
         pass
     else:
         raise Exception("Please specify correctly the \"perform\" attribute of \"evaluation\"!. If you want to perform "
