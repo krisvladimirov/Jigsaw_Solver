@@ -1,7 +1,7 @@
 {
   "mode" : "solve",
   "puzzle_type": "known",
-  "path_to_image" : "../output/cat_60_no.png",
+  "path_to_image" : "../output/cat_77_no.png",
   "name_of_image" : "cat",
   "output_path" : "",
   "dimensions" : {
@@ -15,10 +15,10 @@
   },
   "evaluation" : {
     "perform" : "yes",
-    "path_to_positions" : "../ground_truth/positions/cat_60_no.txt",
-    "path_to_neighbours" : "../ground_truth/neighbours/cat_60_no.txt",
+    "path_to_positions" : "../ground_truth/positions/cat_77_no.txt",
+    "path_to_neighbours" : "../ground_truth/neighbours/cat_77_no.txt",
     "path_to_rotations" : "../",
-    "save_evaluation_to" : "evaluation_cat_60_no.txt"
+    "save_evaluation_to" : "evaluation_cat_77_no.txt"
   },
   "matchlift" : {
     "perform" : "yes",

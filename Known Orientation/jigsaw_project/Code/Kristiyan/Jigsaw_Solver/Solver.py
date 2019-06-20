@@ -467,10 +467,16 @@ class Solver:
         numpy.save(string, self.weights)
 
     def recalculate_weights(self, pieces_of_interest):
-
+        """
+            TODO - Correct this as it is partially wrong
+        :param pieces_of_interest:
+        :type pieces_of_interest:
+        :return:
+        :rtype:
+        """
         # Clearing the lists
-        self.edges_0_4.clear()
-        self.edges_2_4.clear()
+        self.important_edges.clear()
+        self.all_edges.clear()
         for u in pieces_of_interest:
             for v in pieces_of_interest:
                 if u != v:
@@ -483,10 +489,10 @@ class Solver:
                         relation = Constants.get_relation(side_a, side_b)
                         single_edge = (u, v, relation)
                         if piece_swap:
-                            self.edges_0_4.append(single_edge)
+                            self.all_edges.append(single_edge)
                         else:
-                            self.edges_2_4.append(single_edge)
-                            self.edges_0_4.append(single_edge)
+                            self.important_edges.append(single_edge)
+                            self.all_edges.append(single_edge)
 
     def sort_edges(self):
         """
@@ -724,7 +730,7 @@ class Solver:
 
             if x_axis_pieces == x and y_axis_pieces == y:
                 print("Dimensions found")
-                print("Y:{0}  X:{1}".format(y_axis_pieces, x_axis_pieces))
+                print("Y - Height:{0}  X - Width:{1}".format(y_axis_pieces, x_axis_pieces))
                 not_found = False
             else:
                 index = index + 1

@@ -110,13 +110,11 @@ class Slicer:
                 coordinate[piece_index] = (y, x)
                 for xx in range(x - 1, x + 2, 1):
                     for yy in range(y - 1, y + 2, 1):
+                        # Out of bound exception prevented
                         if not ((xx < 0 or xx > len(x_axis) - 1) or (yy < 0 or yy > len(y_axis) - 1)):
                             is_it_neighbour = abs((y + x) - (yy + xx))
                             if is_it_neighbour == 1:
                                 neighbours[piece_index].append(self.initial_positions[yy][xx])
-                        else:
-                            # Out of bound exception prevented
-                            pass
 
                 piece_index = piece_index + 1
 
@@ -509,7 +507,7 @@ def main():
     output_file_name = "cat"
     from_where = "../input/cat.jpeg"
     rotation = None
-    dim = 270
+    dim = 90
 
     obj = Slicer(to_where_positions, to_where_neighbours, to_where_rotations, to_where_puzzle, output_file_name,
                  from_where, rotation, dim)
