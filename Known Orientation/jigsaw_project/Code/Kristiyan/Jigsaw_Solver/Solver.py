@@ -27,7 +27,7 @@ import pathlib
         
 """
 
-pieces = []
+# pieces = []
 
 
 class Solver:
@@ -509,24 +509,24 @@ class Solver:
         :return:
         :rtype:
         """
+        # Keeps track of whether or not all pieces are located in one chunk
         not_in_one = True
+        # Records time
+        # TODO - Add infinity counter to JSON parameters
         infinity_counter = 0
         t = time.process_time()
         while not_in_one:
             self.sort_edges()
             self.kruskal_alg()
             self.get_biggest_chunk()
-            # Get the pieces from the smaller chunks
-            # TODO - What are refused pieces ?
             refused_pieces = self.get_pieces_without_a_place()
             if not refused_pieces \
-                    and len(Constants.BIGGEST_CHUNK.piece_coordinates) == (Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE):
-                # Whenever all pieces are located in one chunk
+                    and len(Constants.BIGGEST_CHUNK.piece_coordinates) == (
+                    Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE):
+                # Change the condition whenever all pieces are located in one chunk
                 not_in_one = False
             else:
-                # TODO - find the border pieces of the biggest chunk
                 border_pieces = self.find_border_pieces(Constants.BIGGEST_CHUNK.chunk)
-                # TODO - calculate the weights again for the pieces we are interested, also the border pieces
                 self.reinitialize_parameters(refused_pieces)
                 self.recalculate_weights(border_pieces.union(refused_pieces))
             infinity_counter = infinity_counter + 1
@@ -538,47 +538,47 @@ class Solver:
 
     def reinitialize_parameters(self, refused_pieces):
         """
-            Resets the chunk
-            It also resets the parent of a refused piece to be the refused pieces itself.
-            For example if 2 has not obtained a position in the main chunk assembly yet but has a connection with 3,
-            thus 3 is 2's parent, we reset this in the parent set.
-            Resets the trees
+            Resets the chunks of refused pieces\n
+            Resets the parent of a refused piece to be itself
+            Resets the trees, thus creating a new tree for each refused piece
         :param refused_pieces:
         :type refused_pieces:
         :return:
         :rtype:
         """
-        for i in refused_pieces:
-            chunk = Chunk.Chunk(i)
-            self.chunks[i] = chunk
-            self.parent_set[i] = i
-            self.trees[i] = {i}
+        for index in refused_pieces:
+            chunk = Chunk.Chunk(index)
+            self.chunks[index] = chunk
+            self.parent_set[index] = index
+            self.trees[index] = {index}
 
-    def find_border_pieces(self, assembly_matrix):
+    @staticmethod
+    def find_border_pieces(chunk_matrix):
         """
-
-        :param assembly_matrix:
-        :type assembly_matrix: ndarray
+            Finds all border pieces of a chunk
+        :param chunk_matrix:
+        :type chunk_matrix: ndarray
         :return:
         :rtype: set
         """
-        # The height or width of the assembly matrix might not be the constant height and width, thus
-        # we take the current values of the assembly matrix
-        h, w = assembly_matrix.shape
-        # Make this an array because it can't be iterated
-        empty_spots = numpy.argwhere(assembly_matrix < 0)  # From 2d to 1d vector holding coordinates
-        border_piece = set()
+        # Take the height and width of the chunk we are working with
+        h, w = chunk_matrix.shape
+        # An array of tuples where there is and empty position (y, x)
+        empty_spots = numpy.argwhere(chunk_matrix < 0)
+        border_pieces = set()
         for coordinate in empty_spots:
-            # The four possible off-sets in such order R(), B(), L(), T()
+            # The four possible off-sets in such order [Right, Bottom, Left, Top]
             for off_set in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+                # y, x coordinate where we will check for a border piece
                 y, x = map(add, tuple(coordinate), off_set)
                 # Prevents the coordinate from going out of bound
                 if (y >= 0 and x >= 0) and (y < h and x < w):
-                    lookup_value = assembly_matrix[y][x]
+                    lookup_value = chunk_matrix[y][x]
+                    # If the y, x position is not empty we have found a border piece
                     if lookup_value != -1:
-                        border_piece.add(lookup_value)
+                        border_pieces.add(lookup_value)
 
-        return border_piece
+        return border_pieces
 
     def create_chunks(self):
         """
@@ -774,33 +774,38 @@ class Solver:
 
     def get_biggest_chunk(self):
         """
-
+            Finds the chunk containing most puzzle pieces and saves it in the constants for later use
         :return:
-        :rtype: Chunk
+        :rtype:
         """
         max_size = -1
-        for chunk in self.chunks:
-            if chunk is not None:
-                chunk_len = len(chunk.piece_coordinates)
+        biggest_chunk_at_index = 0
+        for index in range(len(self.chunks)):
+            # Skip uninitialized chunks in the array
+            if self.chunks[index] is not None:
+                chunk_len = len(self.chunks[index].piece_coordinates)
+                # Compare sizes and find biggest chunk
                 if max_size < chunk_len:
                     max_size = chunk_len
-                    Constants.BIGGEST_CHUNK = chunk
+                    biggest_chunk_at_index = index
+
+        Constants.BIGGEST_CHUNK = self.chunks[biggest_chunk_at_index]
 
     def get_pieces_without_a_place(self):
         """
-            Gets all pieces without a location
+            Gets all pieces without a position in the biggest chunk
         :return:
         :rtype: set
         """
-        index = 0
-        no_location_pieces = set()
-        for chnk in self.chunks:
-            if chnk is not None and chnk != Constants.BIGGEST_CHUNK:
-                pieces = set(numpy.ravel(chnk.chunk))
-                if -1 in pieces:
-                    pieces.remove(-1)
-                no_location_pieces = no_location_pieces.union(pieces)
+        piece_without_location = set()
+        for index in range(len(self.chunks)):
+            if self.chunks[index] is not None and self.chunks[index] != Constants.BIGGEST_CHUNK:
+                pieces = set(numpy.ravel(self.chunks[index]))
+                # Remove empty positions, as we are not interested in them
+                if Constants.VALUE_INITIALIZER in pieces:
+                    pieces.remove(Constants.VALUE_INITIALIZER)
+                piece_without_location = piece_without_location.union(pieces)
+                # Deallocate the chunk for later use
                 self.chunks[index] = None
-            index = index + 1
 
-        return no_location_pieces
+        return piece_without_location
