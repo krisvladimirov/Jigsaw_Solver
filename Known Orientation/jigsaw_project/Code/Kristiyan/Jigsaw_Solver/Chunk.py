@@ -36,27 +36,22 @@ class Chunk:
         :rtype: bool
         """
         off_set = Constants.get_off_set(side_a, side_b)
-        return self.update_three(off_set, piece_u, piece_v, chunk_v)
+        return self.update_four(off_set, piece_u, piece_v, chunk_v)
 
-    def update_three(self, off_set, piece_u, piece_v, chunk_v):
+    def update_four(self, off_set, piece_u, piece_v, chunk_v):
         """
-            Whenever both chunks are initialized
-        :param off_set:
+            Follows the procedures of checking if two chunks are supposed to be matched, if so it matches them.
+        :param off_set: The relation between two pieces
         :type off_set: tuple
-        :param piece_u:
+        :param piece_u: A piece from chunk_u (i.e. the self.Chunk)
         :type piece_u: int
-        :param piece_v:
+        :param piece_v: A piece from chunk_v (i.e. the chunk_v
         :type piece_v: int
-        :param chunk_v:
+        :param chunk_v: The chunk from the other side of the relation
         :type chunk_v: Chunk
-        :return:
+        :return: Whether or not two pieces can be matched without causing a collision or going out of boundary
         :rtype: bool
         """
-
-        old_height_u = self.current_height
-        old_width_u = self.current_width
-        old_height_v = chunk_v.current_height
-        old_width_v = chunk_v.current_width
 
         # Make copies so we can work on the merging and if the merge is unsuccessful
         # We can simply discard the copies
@@ -68,9 +63,12 @@ class Chunk:
         x_u = position_u[1]
         y_v = position_v[0]
         x_v = position_v[1]
-        # Relation condition
 
-        collision = False
+        # Dimension parameters
+        current_height_u = self.current_height
+        current_width_u = self.current_width
+        current_height_v = chunk_v.current_height
+        current_width_v = chunk_v.current_width
 
         if off_set == Constants.RIGHT_LEFT_OFF_SET:
             # Outer condition
@@ -81,37 +79,15 @@ class Chunk:
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, off_set)
 
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
-
                 elif x_u < x_v:
                     correction_off_set = (0, x_v - x_u - 1)
                     piece_coordinates_u, current_height_u, current_width_u = \
                         self.adjust_piece_coordinates(piece_coordinates_u, correction_off_set)
 
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, chunk_v.current_height, chunk_v.current_width,
-                                                            current_height_u, current_width_u):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
-
                 elif x_u > x_v:
                     correction_off_set = tuple(map(add, (0, position_u[1]), off_set))
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, correction_off_set)
-
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
 
             # Outer condition
             elif y_u < y_v:
@@ -124,39 +100,15 @@ class Chunk:
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, off_set)
 
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v,
-                                                            current_height_u, current_width_u):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
-
                 elif x_u < x_v:
                     correction_off_set = (0, x_v - x_u - 1)
                     piece_coordinates_u, current_height_u, current_width_u = \
                         self.adjust_piece_coordinates(piece_coordinates_u, correction_off_set)
 
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, chunk_v.current_height, chunk_v.current_width,
-                                                            current_height_u, current_width_u):
-                        collision = False  # No collision
-                    else:
-                        collision = True  # Collision
-
                 elif x_u > x_v:
                     correction_off_set = tuple(map(add, (0, position_u[1]), off_set))
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, correction_off_set)
-
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v,
-                                                            current_height_u, current_width_u):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
 
             # Outer condition
             elif y_u > y_v:
@@ -169,37 +121,15 @@ class Chunk:
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, off_set)
 
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
-
                 elif x_u < x_v:
                     correction_off_set = (0, x_v - x_u - 1)
                     piece_coordinates_u, current_height_u, current_width_u = \
                         self.adjust_piece_coordinates(piece_coordinates_u, correction_off_set)
 
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v,
-                                                            current_height_u, current_width_u):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
-
                 elif x_u > x_v:
                     correction_off_set = tuple(map(add, (0, position_u[1]), off_set))
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, correction_off_set)
-
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v)\
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
 
         # Relation condition
         elif off_set == Constants.BOTTOM_TOP_OFF_SET:
@@ -211,37 +141,15 @@ class Chunk:
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, off_set)
 
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
-
                 elif y_u < y_v:
                     correction_off_set = (y_v - y_u - 1, 0)
                     piece_coordinates_u, current_height_u, current_width_u = \
                         self.adjust_piece_coordinates(piece_coordinates_u, correction_off_set)
 
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, chunk_v.current_height, chunk_v.current_width,
-                                                            current_height_u, current_width_u):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
-
                 elif y_u > y_v:
                     correction_off_set = (y_u - y_v + 1, 0)
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, correction_off_set)
-
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
 
             # Outer condition
             elif x_u < x_v:
@@ -253,39 +161,15 @@ class Chunk:
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, off_set)
 
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v,
-                                                            current_height_u, current_width_u):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
-
                 elif y_u < y_v:
                     correction_off_set = (y_v - y_u - 1, 0)
                     piece_coordinates_u, current_height_u, current_width_u = \
                         self.adjust_piece_coordinates(piece_coordinates_u, correction_off_set)
 
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, chunk_v.current_height, chunk_v.current_width,
-                                                            current_height_u, current_width_u):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
-
                 elif y_u > y_v:
                     correction_off_set = (y_u - y_v + 1, 0)
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, correction_off_set)
-
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v,
-                                                            current_height_u, current_width_u):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
 
             # Outer condition
             elif x_u > x_v:
@@ -297,43 +181,35 @@ class Chunk:
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, off_set)
 
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
-
                 elif y_u < y_v:
                     correction_off_set = (y_v - y_u - 1, 0)
                     piece_coordinates_u, current_height_u, current_width_u = \
                         self.adjust_piece_coordinates(piece_coordinates_u, correction_off_set)
-
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v,
-                                                            current_height_u, current_width_u):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
 
                 elif y_u > y_v:
                     correction_off_set = (y_u - y_v + 1, 0)
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, correction_off_set)
 
-                    if not self.is_collision(piece_coordinates_u, piece_coordinates_v) \
-                            and not self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
-                                                            chunk_v, current_height_v, current_width_v):
-                        collision = False  # No Collision
-                    else:
-                        collision = True  # Collision
+        # A correct placement is one that does not cause any piece overlapping/collisions or it causes pieces to go over
+        # the boundary of the puzzle (if known)
+        correct_placement = self.is_collision(piece_coordinates_u, piece_coordinates_v)
 
-        if not collision:
-            self.merge_chunks(piece_coordinates_u, piece_coordinates_v)
-            return False
+        if Constants.BIGGEST_CHUNK is not None:
+            out_of_boundary = self.is_out_of_boundary({**piece_coordinates_u, **piece_coordinates_v},
+                                                      chunk_v, current_height_v, current_width_v,
+                                                      current_height_u, current_width_u)
+            if not correct_placement and not out_of_boundary:
+                self.merge_chunks(piece_coordinates_u, piece_coordinates_v)
+                return False
+            else:
+                return True
         else:
-            return True
+            if not correct_placement:
+                self.merge_chunks(piece_coordinates_u, piece_coordinates_v)
+                return False
+            else:
+                return True
 
     def merge_chunks(self, piece_coordinates_u, piece_coordinates_v):
         """
@@ -368,8 +244,7 @@ class Chunk:
         for key, value in self.piece_coordinates.items():
             self.chunk[value] = key
 
-    def is_out_of_boundary(self, coordinates, chunk_v, chunk_v_height, chunk_v_width, chunk_u_height=0,
-                           chunk_u_width=0):
+    def is_out_of_boundary(self, coordinates, chunk_v, chunk_v_height, chunk_v_width, chunk_u_height, chunk_u_width):
         """
             First it checks to see if any of the new height or width of either of the chunks are out of boundary.
             If they are a True boolean is returned which will then be passed up the method calls to the evaluation.
@@ -498,8 +373,8 @@ class Chunk:
 
         intersection = set(dict_a.values()) & set(dict_b.values())
         if not intersection:
-            # Empty
+            # Empty - No collisions
             return False
         else:
-            # Not Empty
+            # Not Empty - Collisions
             return True
