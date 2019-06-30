@@ -466,7 +466,7 @@ class Solver:
                             "orientation or \"unknown\" for puzzles with unknown orientation.")
         numpy.save(string, self.weights)
 
-    def recalculate_weights(self, pieces_of_interest):
+    def recalculate_weights(self, pieces_of_interest, refused_pieces):
         """
             TODO - Correct this as it is partially wrong
         :param pieces_of_interest:
@@ -477,31 +477,93 @@ class Solver:
         # Clearing the lists
         self.important_edges.clear()
         self.all_edges.clear()
+        # TODO - 1-  pieces_of_interest with other pieces of interest should not be considered
+        # TODO - 1.1 - first we consider pieces_of_interest only with refused_pieces, gives list_one
+        # TODO - 2 - secondly we consider connections between only between refused_pieces, gives list_two
+        # TODO - 3 - we sort the produced lists of each step individually
+        # TODO - 4 - append the second list and the end of the first
+
+        # TODO - Choose more sensible names
+        list_one_all_edges = []
+        list_one_important_edges = []
+        list_two_all_edges = []
+        list_two_important_edges = []
+
+        # Step 1 and 1.1
         for u in pieces_of_interest:
-            for v in pieces_of_interest:
+            for v in refused_pieces:
+                # Just a safety precaution, even thought it will never be false, to be tested
                 if u != v:
                     for side_a in range(0, 4):
-                        # image_a = self.pieces[u].piece
-                        # image_b = self.pieces[v].piece
                         side_b = Constants.get_combo_without_rotation(side_a)
                         _, _, piece_swap = Constants.convert_relation(side_a, side_b)
                         # rot_a, rot_b = self.get_rotation_mgc(side_a, side_b)
                         relation = Constants.get_relation(side_a, side_b)
                         single_edge = (u, v, relation)
                         if piece_swap:
-                            self.all_edges.append(single_edge)
+                            list_one_all_edges.append(single_edge)
                         else:
-                            self.important_edges.append(single_edge)
-                            self.all_edges.append(single_edge)
+                            list_one_all_edges.append(single_edge)
+                            list_one_important_edges.append(single_edge)
 
-    def sort_edges(self):
+        # Step 2
+        for u in refused_pieces:
+            for v in refused_pieces:
+                if u != v:
+                    for side_a in range(0, 4):
+                        side_b = Constants.get_combo_without_rotation(side_a)
+                        _, _, piece_swap = Constants.convert_relation(side_a, side_b)
+                        # rot_a, rot_b = self.get_rotation_mgc(side_a, side_b)
+                        relation = Constants.get_relation(side_a, side_b)
+                        single_edge = (u, v, relation)
+                        if piece_swap:
+                            list_two_all_edges.append(single_edge)
+                        else:
+                            list_two_all_edges.append(single_edge)
+                            list_two_important_edges.append(single_edge)
+
+        # Step 3
+        self.sort_edges([list_one_important_edges, list_one_all_edges])
+        self.sort_edges([list_two_important_edges, list_two_all_edges])
+
+        # Step 4
+        self.all_edges = list_one_all_edges + list_two_all_edges
+        self.important_edges = list_one_important_edges + list_two_important_edges
+
+
+        # for u in pieces_of_interest:
+        #     for v in pieces_of_interest:
+        #         if u != v:
+        #             for side_a in range(0, 4):
+        #                 # image_a = self.pieces[u].piece
+        #                 # image_b = self.pieces[v].piece
+        #                 side_b = Constants.get_combo_without_rotation(side_a)
+        #                 _, _, piece_swap = Constants.convert_relation(side_a, side_b)
+        #                 # rot_a, rot_b = self.get_rotation_mgc(side_a, side_b)
+        #                 relation = Constants.get_relation(side_a, side_b)
+        #                 single_edge = (u, v, relation)
+        #                 if piece_swap:
+        #                     self.all_edges.append(single_edge)
+        #                 else:
+        #                     self.important_edges.append(single_edge)
+        #                     self.all_edges.append(single_edge)
+
+    def sort_edges(self, lists_to_sort):
         """
-            Sorts the edges from the smallest error to the biggest error
+            Gets a list containing lists of edges as show:
+            lists_to_sort = [self.important_edges, self.all_edges, and so on],
+            and it sorts the edges according to the weights.
+            The edges are sorted from the smallest edge weight (error) to the biggest error
             This is done so Kruskal's algorithm can be applied
+        :param lists_to_sort:
+        :type: list
         :return:
         """
-        self.important_edges.sort(key=lambda x: self.weights[x])
-        self.all_edges.sort(key=lambda x: self.weights[x])
+        for lst in lists_to_sort:
+            lst.sort(key=lambda x: self.weights[x])
+
+        # self.important_edges.sort(key=lambda x: self.weights[x])
+        # self.all_edges.sort(key=lambda x: self.weights[x])
 
     def find_mst(self):
         """
@@ -515,8 +577,8 @@ class Solver:
         # TODO - Add infinity counter to JSON parameters
         infinity_counter = 0
         t = time.process_time()
+        self.sort_edges([self.important_edges, self.all_edges])
         while not_in_one:
-            self.sort_edges()
             self.kruskal_alg()
             self.get_biggest_chunk()
             refused_pieces = self.get_pieces_without_a_place()
@@ -528,7 +590,8 @@ class Solver:
             else:
                 border_pieces = self.find_border_pieces(Constants.BIGGEST_CHUNK.chunk)
                 self.reinitialize_parameters(refused_pieces)
-                self.recalculate_weights(border_pieces.union(refused_pieces))
+                self.recalculate_weights(border_pieces, refused_pieces)
+                # self.recalculate_weights(border_pieces.union(refused_pieces))
             infinity_counter = infinity_counter + 1
             print("Infinity counter at ->", infinity_counter)
         self.assembly_image(Constants.BIGGEST_CHUNK.piece_coordinates)
