@@ -1,29 +1,33 @@
 {
-  "mode" : "solve",
-  "puzzle_type": "known",
-  "path_to_image" : "../output/cat_77_no.png",
-  "name_of_image" : "cat",
-  "output_path" : "",
-  "dimensions" : {
-    "height" : 0,
-    "width": 0
-  },
-  "weight" : {
-    "perform" : "no",
-    "path_to_weights": "",
-    "output_path" : ""
-  },
-  "evaluation" : {
-    "perform" : "yes",
-    "path_to_positions" : "../ground_truth/positions/cat_77_no.txt",
-    "path_to_neighbours" : "../ground_truth/neighbours/cat_77_no.txt",
-    "path_to_rotations" : "../",
-    "save_evaluation_to" : "evaluation_cat_77_no.txt"
-  },
-  "matchlift" : {
-    "perform" : "yes",
-    "path_to_matchlift_data": "",
-    "output_path" : "",
-    "num_correspondences" : 2
-  }
+	"mode": "solve",
+	"puzzle_type": "known",
+    "name_of_image": "cat",
+	"solving": {
+		"path_to_image": "../output/cat_77_no.png",
+		"path_to_weights": "",
+		"path_to_matchlift_data": "",
+		"output_path": "",
+		"dimensions": {
+			"height": 0,
+			"width": 0
+		}
+	},
+	"writing": {
+		"weights": {
+			"perform": "no",
+			"output_path": ""
+		},
+		"matchlift": {
+			"perform": "no",
+			"output_path": "",
+			"num_correspondences": 2
+		}
+	},
+	"evaluation": {
+		"perform": "no",
+		"path_to_positions": "../ground_truth/positions/cat_77_no.txt",
+		"path_to_neighbours": "../ground_truth/neighbours/cat_77_no.txt",
+		"path_to_rotations": "../",
+		"save_evaluation_to": "evaluation_cat_77_no.txt"
+	}
 }

@@ -64,63 +64,63 @@ def pre_calculate_weights():
     # print("Completed big_cat")
 
 
-def do_normal_solving():
-
-    """
-
-    :return:
-    :rtype:
-    """
-    """
-        LOOK AT Solver.start_solving() function for more info on option!
-    """
-    OPTION = 0
-    path_to_image = ""
-    path_to_weight = ""
-    path_to_locations = ""
-    path_to_rotations = ""
-    save_evaluation_to = ""
-    # path_to_matchlift_data = "big_cat_9.mat"
-    # num_correspondences = 1
-    # output_path = ""
-
-    print("Loading: ", path_to_image)
-    print("Starting extracting of pieces")
-    extracted_pieces, dimensions, og_dimensions = Detector.main(path_to_image)
-    print(str(len(extracted_pieces)), "pieces have been extracted successfully")
-
-    print("Preparing Solver program...")
-    solver = Solver.Solver()
-    print("Loading the matchlift weights...")
-    # solver.read_cycle_data(path_to_matchlift_data, num_correspondences, len(extracted_pieces))
-    # print("Finished reading machlift data")
-    # print(solver.matchlift_weights_0_4)
-    print("Starting Solver...")
-    solver.start_solving(extracted_pieces, dimensions, og_dimensions, path_to_weight, OPTION)
-
-    # print("Evaluation process commence...")
-    # ev = Evaluation.Evaluation()
-    # ev.load_data(path_to_locations, path_to_rotations)
-    # ev.evaluate(save_evaluation_to)
-    # ev.piece_evaluation()
-
-
-def do_matchlift_weights():
-    path = "../output/no_rotation/big_cat_16_no.png"
-    path_to_weight = "../weights/kris/kris_16_no.npy"
-    output_path = "./"
-    name_of_image = "big_cat"
-    how_many_correspondences = 1
-
-    print("Loading: ", path)
-    print("Starting extracting of pieces")
-    extracted_pieces, dimensions, og_dimensions = Detector.main(path)
-    print(str(len(extracted_pieces)), "pieces have been extracted successfully")
-    print("Preparing Solver for Matchlift...")
-    solver = Solver.Solver()
-    print("Solver computing correspondences for MatchLift...")
-    solver.start_solving(extracted_pieces, dimensions, og_dimensions, path_to_weight)
-    solver.get_mgc_matchlift(output_path + name_of_image, how_many_correspondences)
+# def do_normal_solving():
+#
+#     """
+#
+#     :return:
+#     :rtype:
+#     """
+#     """
+#         LOOK AT Solver.start_solving() function for more info on option!
+#     """
+#     OPTION = 0
+#     path_to_image = ""
+#     path_to_weight = ""
+#     path_to_locations = ""
+#     path_to_rotations = ""
+#     save_evaluation_to = ""
+#     # path_to_matchlift_data = "big_cat_9.mat"
+#     # num_correspondences = 1
+#     # output_path = ""
+#
+#     print("Loading: ", path_to_image)
+#     print("Starting extracting of pieces")
+#     extracted_pieces, dimensions, og_dimensions = Detector.main(path_to_image)
+#     print(str(len(extracted_pieces)), "pieces have been extracted successfully")
+#
+#     print("Preparing Solver program...")
+#     solver = Solver.Solver()
+#     print("Loading the matchlift weights...")
+#     # solver.read_cycle_data(path_to_matchlift_data, num_correspondences, len(extracted_pieces))
+#     # print("Finished reading machlift data")
+#     # print(solver.matchlift_weights_0_4)
+#     print("Starting Solver...")
+#     solver.start_solving(extracted_pieces, dimensions, og_dimensions, path_to_weight, OPTION)
+#
+#     # print("Evaluation process commence...")
+#     # ev = Evaluation.Evaluation()
+#     # ev.load_data(path_to_locations, path_to_rotations)
+#     # ev.evaluate(save_evaluation_to)
+#     # ev.piece_evaluation()
+#
+#
+# def do_matchlift_weights():
+#     path = "../output/no_rotation/big_cat_16_no.png"
+#     path_to_weight = "../weights/kris/kris_16_no.npy"
+#     output_path = "./"
+#     name_of_image = "big_cat"
+#     how_many_correspondences = 1
+#
+#     print("Loading: ", path)
+#     print("Starting extracting of pieces")
+#     extracted_pieces, dimensions, og_dimensions = Detector.main(path)
+#     print(str(len(extracted_pieces)), "pieces have been extracted successfully")
+#     print("Preparing Solver for Matchlift...")
+#     solver = Solver.Solver()
+#     print("Solver computing correspondences for MatchLift...")
+#     solver.start_solving(extracted_pieces, dimensions, og_dimensions, path_to_weight)
+#     solver.get_mgc_matchlift(output_path + name_of_image, how_many_correspondences)
 
 
 def load_puzzle():
@@ -149,6 +149,31 @@ def load_puzzle():
     return extracted_pieces, dimensions, og_dimensions
 
 
+def solve(solver):
+    """
+        TODO
+    :param solver:
+    :type solver: S
+    :return:
+    :rtype:
+    """
+    # Check if weights are provided
+    if str.lower(Constants.settings["solving"]["path_to_weights"]) != Constants.EMPTY_PATH:
+        solver.load_weights()  # Load weights for the solver, if provided
+    else:
+        solver.get_mgc()  # Computes weights, if not provided
+
+    # Check if matchlift data has been provided
+    if str.lower(Constants.settings["solving"]["path_to_matchlift_data"]) != Constants.EMPTY_PATH:
+        # Load matchlift data for the optimizer, if provided
+        # Otherwise don't do anything
+        # TODO - Complete the below function
+        solver.load_matchlift_data()
+
+    solver.create_chunks()  # Build the chunks for the MST
+    solver.find_mst()  # Performs the constrained MST algorithm
+
+
 def write_data(solver):
     """
         Saves piece weights or matchlift weights
@@ -156,26 +181,20 @@ def write_data(solver):
     :return:
     """
 
-    # Normal weights
-    if str.lower(Constants.settings["weight"]["perform"]) == Constants.YES:
-        # Check if the path exists if it doesn't create one
-        print("Preparing the solver for MGC weight calculation...")
-        solver.save_weights_to_npy()
-        print("Weights were computed.")
-    elif str.lower(Constants.settings["weight"]["perform"]) != Constants.NO \
-            or str.lower(Constants.settings["weight"]["perform"]) != Constants.YES:
+    # Puzzle weights
+    if str.lower(str(Constants.settings["writing"]["weights"]["perform"]) == Constants.YES):
+        solver.save_weights_to_npy(Constants.settings["writing"])
+    elif str.lower(str(Constants.settings["writing"]["weights"]["perform"]) != Constants.YES or str(
+            Constants.settings["writing"]["weights"]["perform"]) != Constants.NO):
         print("Did not pre-calculate weights, \"mode\" == write "
               "but \"weight\" perform is \"no\".\nCheck the settings.json if a mistake was made\n")
 
-    # Matchlift
-    if str.lower(Constants.settings["matchlift"]["perform"]) == Constants.YES:
-        # Do the calculation of the matchlift
-        print("Preparing solver for MatchLift...")
-        solver.get_mgc_matchlift()
-        print("Matchlift correspondences were computed.")
-
-    elif str.lower(Constants.settings["matchlift"]["perform"]) != Constants.NO \
-            or str.lower(Constants.settings["matchlift"]["perform"]) != Constants.YES:
+    # Matchlift data
+    if str.lower(Constants.settings["writing"]["matchlift"]["perform"]) == Constants.YES:
+        # TODO
+        solver.get_mgc_matchlift(Constants.settings["writing"])
+    elif str.lower(Constants.settings["writing"]["matchlift"]["perform"]) != Constants.NO \
+            or str.lower(Constants.settings["writing"]["matchlift"]["perform"]) != Constants.YES:
         print("Did not calculate correspondences for matchlift, \"mode\" == write "
               "but \"matchlift\" perform is \"yes\".\nCheck the settings.json if a mistake was made\n")
 
@@ -194,7 +213,7 @@ def perform_evaluation():
 
 def ask_to_rotate(solver):
     """
-
+        TODO
     :param solver:
     :type solver:
     :return:
@@ -205,7 +224,7 @@ def ask_to_rotate(solver):
     performed_action = "No"
     print("")
     height, width, _ = solver.solution.shape
-    resized = openCV.resize(solver.solution, (int(width * 0.4), int(height * 0.4)), interpolation=openCV.INTER_AREA)
+    resized = openCV.resize(solver.solution, (int(width * 0.25), int(height * 0.25)), interpolation=openCV.INTER_AREA)
     openCV.imshow("Solved", resized)
     openCV.waitKey(0)
     openCV.destroyAllWindows()
@@ -234,54 +253,46 @@ def ask_to_rotate(solver):
 
     print("Finished")
 
+
 def start():
     """
         Reads the json data provided by the user
         The json contains:
-        1. The mode of the operation -> either read data and solve the puzzle or write data
-        2. The type of puzzle the program will solve -> Known orientation or Unknown orientation
-        3. The path to the image -> where it will be loaded from
-        4. The name of the image -> how the processed image will be saved as
-        5. The output path to the processed image -> where it will be saved
-        6. Path to any pre-calculated weights (Optional)
-        7. Path to the correct positions of the puzzle -> for evaluation purposes
-        8. Path to the correct neighbours of the puzzle -> for evaluation purposes
-        9. Path to the correct rotations of the puzzle -> for evaluation purposes
-        10. Path to where the evaluation will be saved
-        (Optional)
-        11. Path to matchlift data
-        12. Number of correspondences of the matchlift data
+        1. The mode of the operation -> You can either 'solve' a puzzle or 'write' data i.e. MGC data or Matchlift data
+        2. The type of puzzle the program will solve -> 'known' orientation or 'unknown' orientation
+        3. Name of the image -> under what name the processed image will be saved as
+        4. Solving -> defines the parameters related to solving a puzzle
+            4.1 The path to the image -> where you are loading the image from
+            4.2 The path to the weights -> where you are loading the weights from
+            4.3 The path to matchlift -> where you are loading the matchlift data from
+            4.4 The output path of the image -> where the assembled image will be saved
+            4.5 Dimensions -> Not implemented yet
+        5. Writing -> all the data associated with pre-calculating MGC or computing Matchlift
+            -> each perform specifies whether or not a certain operation should be performed
+            -> output path specifies where the data will be saved
+            -> number of correspondences is a specific matchlift parameter
+        6. Evaluation of assembled puzzle -> all data needed to perform an evaluation of a assembled puzzle
+            -> perform specifies whether or not the evaluation should be done
+            -> Path to the correct positions of the puzzle
+            -> Path to the correct neighbours of the puzzle
+            -> Path to the correct rotations of the puzzle
     :return:
     """
-    # Save the json as a dictionary in the Constants for easy access
+
+    # Opens the json file containing the settings and saves it directly to a dictionary
     with open("settings.json", 'r') as read_file:
         Constants.settings = json.load(read_file)
 
+    # Solver object, also prepares the solver for what would follow next
     solver = Solver.Solver()
     extracted_pieces, dimensions, og_dimensions = load_puzzle()
     solver.prepare_solver(extracted_pieces, dimensions, og_dimensions)
 
     # Solving a puzzle
     if str.lower(Constants.settings["mode"]) == Constants.SOLVE:
-        # Check if weights are provided
-        if str.lower(Constants.settings["weight"]["path_to_weights"]) != Constants.EMPTY_PATH:
-            # Load weights for the solver
-            solver.load_weights()
-        else:
-            # Computes weights
-            solver.get_mgc()
+        solve(solver)
 
-        # Check if matchlift data has been provided
-        if str.lower(Constants.settings["matchlift"]["path_to_matchlift_data"]) != Constants.EMPTY_PATH:
-            # Load matchlift data for the optimizer
-            solver.load_matchlift_data()
-        else:
-            pass
-
-        # TODO - Matchlift optimizer
-        solver.create_chunks()
-        solver.find_mst()
-    # Writing some data, i.e. weights matchlift
+    # Writing some data, i.e. weights or matchlift
     elif str.lower(Constants.settings["mode"]) == Constants.WRITE:
         write_data(solver)
     else:
@@ -292,6 +303,7 @@ def start():
     # Perform evaluation if it is provided
     if str.lower(Constants.settings["evaluation"]["perform"]) == Constants.YES:
         perform_evaluation()
+
     # Crashesh for some reason
     elif str.lower(Constants.settings["evaluation"]["perform"]) != Constants.NO \
             and str.lower(Constants.settings["evaluation"]["perform"]) != Constants.YES:
@@ -301,5 +313,4 @@ def start():
 
 
 if __name__ == "__main__":
-    # main()
     start()

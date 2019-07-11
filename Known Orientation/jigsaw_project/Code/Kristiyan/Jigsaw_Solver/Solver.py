@@ -91,10 +91,9 @@ class Solver:
         # Create a puzzle piece object for easy access and manipulation, record its index also
         for i in range(len(extracted_pieces)):
             single_piece = Piece.Piece(extracted_pieces[i], i)
-            # TODO - Why am I doing it in two places???
             self.pieces.append(single_piece)
 
-        # TODO - To be removed as it violates the out-of-boundary condition
+        # TODO - To be removed as it violates the out-of-boundary condition (kind of)
         self.initialize_positions_rotations()
         self.initialize_parameters()
 
@@ -149,19 +148,23 @@ class Solver:
         :return:
         :rtype:
         """
+
         # Check if the path exists first
-        if not pathlib.Path.exists(Constants.settings["weight"]["path_to_weights"]):
+        if not pathlib.Path.exists(Constants.settings["solving"]["path_to_weights"]):
             raise Exception("Please specify correctly the \"output_path\" attribute of \"weights\"!")
 
-        self.weights = numpy.load(Constants.settings["weight"]["path_to_weights"])
+        self.weights = numpy.load(Constants.settings["solving"]["path_to_weights"])
 
+        # TODO - Update for weights which include the unknown orientation, thus 16 combinations
         for piece_a in self.pieces:
             for piece_b in self.pieces:
                 # Check if two pieces are the same, if they are skip the comparison
                 if piece_a != piece_b:
                     # This loops gets the necessary 4 rotations of piece_a
+                    # TODO - More specifically this part has to be changed
                     for side_a in range(0, 4):
                         # Get the opposing side of piece b based on the side of piece a
+                        # TODO - This part would also have to be updated for unknown orientations
                         side_b = Constants.get_combo_without_rotation(side_a)
                         # Checks if the pieces need to be swapped in order for the weights to be calculated correctly
                         _, _, piece_swap = Constants.convert_relation(side_a, side_b)
@@ -210,7 +213,6 @@ class Solver:
         # Sorting the weights and edges
         # self.matchlift_edges_0_4.sort(key=lambda x: self.matchlift_weights_0_4[x], reverse=True)
 
-    # TODO - Fixed for non rotated pieces
     def initialize_parameters(self):
         """
             Initializes the array in which we are going to store all the weight as well as the matrix in which we will
@@ -225,67 +227,7 @@ class Solver:
         self.parent_set = [i for i in range(len(self.pieces))]
         # Keeps track of all trees that are formed
         self.trees = [{i} for i in range(len(self.pieces))]
-
-    def get_mgc_matchlift(self):
-        """
-            Calculate the MGC between all pieces including 4 or more correspondencies for matchlift
-        :return:
-        :rtype:
-        """
-
-        edges_with_correspondences = []
-        num_correspondence = Constants.settings["matchlift"]["num_correspondences"]
-
-        if num_correspondence < 1:
-            raise Exception(
-                "The number of correspondences can't be smaller than 1, "
-                "check \"num_correspondences\" in the settings.json")
-
-        # TODO - HEIGHT Range and WIDTH Range will be changed
-        weights_matchlift = numpy.full((Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE,
-                                        Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE, 16,
-                                        num_correspondence), fill_value=0,
-                                       dtype="float")
-        for piece_a in self.pieces:
-            image_a = piece_a.piece
-            # This loops get the necessary 4 rotations of piece_a
-            for piece_b in self.pieces:
-                if piece_a != piece_b:
-                    for side_a in range(0, 4):
-                        image_b = piece_b.piece  # Get the image from the piece object
-                        side_b = Constants.get_combo_without_rotation(side_a)
-                        _, _, piece_swap = Constants.convert_relation(side_a, side_b)
-                        relation = Constants.get_relation(side_a, side_b)
-                        for correspondence in range(0, num_correspondence):
-                            cropped_a = self.crop_it(image_a, correspondence, relation, num_correspondence)
-                            cropped_b = self.crop_it(image_b, correspondence, relation, num_correspondence)
-                            single_edge = (piece_a.index, piece_b.index, relation, correspondence)
-                            if piece_swap:
-                                dissimilarity = Compatibility.mgc_ssd_compatibility(cropped_b, cropped_a, relation)
-                            else:
-                                dissimilarity = Compatibility.mgc_ssd_compatibility(cropped_a, cropped_b, relation)
-
-                            edges_with_correspondences.append(single_edge)
-                            weights_matchlift[piece_a.index, piece_b.index, relation, correspondence] = dissimilarity
-
-        normalized_weights = numpy.full((Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE,
-                                         Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE, 16, num_correspondence),
-                                         fill_value=0, dtype="float")
-
-        for i, j, rel, cor in edges_with_correspondences:
-            min_weight = min(weights_matchlift[i, :, rel, cor].min(), weights_matchlift[:, j, rel, cor].min())
-            normalized_weights[i, j, rel, cor] = normalized_weights[i, j, rel, cor] / (min_weight + Constants.EPSILON)
-
-        file = open(Constants.settings["matchlift"]["output_path"] + Constants.settings["name_of_image"] + "_" + str(
-            Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE) + "_" + str(num_correspondence) + "_cor.txt",
-                    mode="w")
-        for i in range(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE):
-            for j in range(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE):
-                for rel in range(16):
-                    for correspondence in range(num_correspondence):
-                        weight = normalized_weights[i][j][rel][correspondence]
-                        if rel == Constants.RIGHT_LEFT or rel == Constants.LEFT_RIGHT or rel == Constants.BOTTOM_TOP or rel == Constants.TOP_BOTTOM:
-                            file.write(str(weight) + "\n")
+    # TODO - Fixed for non rotated pieces
 
     @staticmethod
     def crop_it(image, index_crop, rel, correspondence):
@@ -320,6 +262,67 @@ class Solver:
 
         return cropped
 
+    def get_mgc_matchlift(self, writing_settings):
+        """
+            Calculate the MGC between all pieces including 4 or more correspondencies for matchlift
+        :return:
+        :rtype:
+        """
+        # TODO
+        edges_with_correspondences = []
+        num_correspondence = writing_settings["matchlift"]["num_correspondences"]
+
+        if num_correspondence < 1:
+            raise Exception(
+                "The number of correspondences can't be smaller than 1, "
+                "check \"num_correspondences\" in the settings.json")
+
+        # # TODO - HEIGHT Range and WIDTH Range will be changed
+        # weights_matchlift = numpy.full((Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE,
+        #                                 Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE, 16,
+        #                                 num_correspondence), fill_value=0,
+        #                                dtype="float")
+        # for piece_a in self.pieces:
+        #     image_a = piece_a.piece
+        #     # This loops get the necessary 4 rotations of piece_a
+        #     for piece_b in self.pieces:
+        #         if piece_a != piece_b:
+        #             for side_a in range(0, 4):
+        #                 image_b = piece_b.piece  # Get the image from the piece object
+        #                 side_b = Constants.get_combo_without_rotation(side_a)
+        #                 _, _, piece_swap = Constants.convert_relation(side_a, side_b)
+        #                 relation = Constants.get_relation(side_a, side_b)
+        #                 for correspondence in range(0, num_correspondence):
+        #                     cropped_a = self.crop_it(image_a, correspondence, relation, num_correspondence)
+        #                     cropped_b = self.crop_it(image_b, correspondence, relation, num_correspondence)
+        #                     single_edge = (piece_a.index, piece_b.index, relation, correspondence)
+        #                     if piece_swap:
+        #                         dissimilarity = Compatibility.mgc_ssd_compatibility(cropped_b, cropped_a, relation)
+        #                     else:
+        #                         dissimilarity = Compatibility.mgc_ssd_compatibility(cropped_a, cropped_b, relation)
+        #
+        #                     edges_with_correspondences.append(single_edge)
+        #                     weights_matchlift[piece_a.index, piece_b.index, relation, correspondence] = dissimilarity
+        #
+        # normalized_weights = numpy.full((Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE,
+        #                                  Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE, 16, num_correspondence),
+        #                                  fill_value=0, dtype="float")
+        #
+        # for i, j, rel, cor in edges_with_correspondences:
+        #     min_weight = min(weights_matchlift[i, :, rel, cor].min(), weights_matchlift[:, j, rel, cor].min())
+        #     normalized_weights[i, j, rel, cor] = normalized_weights[i, j, rel, cor] / (min_weight + Constants.EPSILON)
+        #
+        # file = open(Constants.settings["matchlift"]["output_path"] + Constants.settings["name_of_image"] + "_" + str(
+        #     Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE) + "_" + str(num_correspondence) + "_cor.txt",
+        #             mode="w")
+        # for i in range(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE):
+        #     for j in range(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE):
+        #         for rel in range(16):
+        #             for correspondence in range(num_correspondence):
+        #                 weight = normalized_weights[i][j][rel][correspondence]
+        #                 if rel == Constants.RIGHT_LEFT or rel == Constants.LEFT_RIGHT or rel == Constants.BOTTOM_TOP or rel == Constants.TOP_BOTTOM:
+        #                     file.write(str(weight) + "\n")
+
     # Used for Unknown orientation
     # Used for Matchlift Unknown orientation
     def get_mgc_rotated(self):
@@ -327,6 +330,9 @@ class Solver:
             Calculates the MGC between all pieces while taking the rotation into consideration
         :return:
         """
+
+        print("Computing the weights (dissimilarities) between puzzle pieces with", Constants.settings["puzzle_type"],
+              "orientation")
         t = time.process_time()
         """
             The process of calculating the weight is performed for all 16 relations between the pieces as the 
@@ -373,8 +379,10 @@ class Solver:
             normalized_weights[i, j, rel] = self.weights[i, j, rel] / (min_weight + Constants.EPSILON)
         self.weights = normalized_weights
         elapsed_time = time.process_time() - t
-        print("Elapsed time for ", str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE), " pieces of 100 pixel size:",
-              elapsed_time, "s")
+        print("Elapsed time for computing the weights (dissimilarities) between",
+              str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE), "pieces with", Constants.settings["puzzle_type"],
+              "orientation and pixel size:",
+              Constants.PATCH_DIMENSIONS, "in", elapsed_time, "S")
 
     # Used for Known orientation
     # Used for Matchlift Known orientation
@@ -383,6 +391,8 @@ class Solver:
             Calculates the MGC between all pieces
         :return:
         """
+        print("Computing the weights (dissimilarities) between puzzle pieces with", Constants.settings["puzzle_type"],
+              "orientation")
         t = time.process_time()
 
         """
@@ -420,7 +430,6 @@ class Solver:
                             self.important_edges.append(single_edge)
                             self.weights[piece_a.index, piece_b.index, relation] = dissimilarity
 
-        # TODO - Change this a bit if calculating matchlift weights
         # Normalization step
         normalized_weights = numpy.array(self.weights)
         for i, j, rel in self.important_edges:
@@ -430,8 +439,10 @@ class Solver:
         self.weights = normalized_weights
 
         elapsed_time = time.process_time() - t
-        print("Elapsed time for computing mgc", str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE), " pieces of", Constants.PATCH_DIMENSIONS, "pixel size:",
-              elapsed_time, "s")
+        print("Elapsed time for computing the weights (dissimilarities) between",
+              str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE), "pieces with", Constants.settings["puzzle_type"],
+              "orientation and pixel size:",
+              Constants.PATCH_DIMENSIONS, "in", elapsed_time, "S")
 
         # TODO - Decide what to do with this
         # self.optimise_weights_from_matchlift()
@@ -440,26 +451,28 @@ class Solver:
         for i, j, rel in self.matchlift_edges_0_4:
             self.weights_0_4[i, j, rel] = float(0)
 
-    # Used for Known orientation
-    # Used for Unknown orientation
-    def save_weights_to_npy(self):
+    def save_weights_to_npy(self, write_settings):
         """
             Saves the calculated weights into a numpy file for later use
+            Used for Known orientation
+            Used for Unknown orientation
+        :param write_settings:
+        :type write_settings: dict
         :return:
         :rtype:
         """
 
         # Check if the directory exists
-        # if not pathlib.Path.is_dir(Constants.settings["output_path"]):
-        #     raise Exception("Please specify correctly the \"output_path\" attribute of \"weights\"!")
+        if not pathlib.Path.is_dir(write_settings["weights"]["output_path"]):
+            raise Exception("Please specify correctly the \"output_path\" attribute of \"weights\"!")
 
         if Constants.settings["puzzle_type"] == Constants.KNOWN_ORIENTATION:
             self.get_mgc()
-            string = Constants.settings["weight"]["output_path"] \
-                + Constants.settings["name_of_image"] + str(len(self.pieces)) + "_no.npy"
+            string = write_settings["weight"]["output_path"] + Constants.settings["name_of_image"] + str(
+                len(self.pieces)) + "_no.npy"
         elif Constants.settings["puzzle_type"] == Constants.UNKNOWN_ORIENTATION:
             self.get_mgc_rotated()
-            string = Constants.settings["weight"]["output_path"] + Constants.settings["name_of_image"] \
+            string = write_settings["weight"]["output_path"] + Constants.settings["name_of_image"] \
                 + str(len(self.pieces)) + "_90.npy"
         else:
             raise Exception("Please specify the type of the puzzle correctly! Either \"known\" for puzzles with known "
@@ -580,7 +593,8 @@ class Solver:
         self.sort_edges([self.important_edges, self.all_edges])
         while not_in_one:
             self.kruskal_alg()
-            self.get_biggest_chunk()
+            self.find_biggest_chunk()
+            # self.trim_biggest_chunk()
             refused_pieces = self.get_pieces_without_a_place()
             if not refused_pieces \
                     and len(Constants.BIGGEST_CHUNK.piece_coordinates) == (
@@ -594,7 +608,8 @@ class Solver:
                 # self.recalculate_weights(border_pieces.union(refused_pieces))
             infinity_counter = infinity_counter + 1
             print("Infinity counter at ->", infinity_counter)
-        self.assembly_image(Constants.BIGGEST_CHUNK.piece_coordinates)
+        # self.assembly_image(Constants.BIGGEST_CHUNK.piece_coordinates)
+        self.just_assemble_it(Constants.BIGGEST_CHUNK.piece_coordinates)
         elapsed_time = time.process_time() - t
         print("Elapsed time for solving big_cat_", str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE), "_no", " pieces of", Constants.PATCH_DIMENSIONS, "pixel size:",
               elapsed_time, "s")
@@ -835,7 +850,51 @@ class Solver:
         #             if rel == Constants.RIGHT_LEFT or rel == Constants.LEFT_RIGHT or rel == Constants.BOTTOM_TOP or rel == Constants.TOP_BOTTOM:
         #                 file.write(str(weight) + "\n")
 
-    def get_biggest_chunk(self):
+    def just_assemble_it(self, dictionary):
+        """
+            Used for testing purposes to assemble a incomplete image
+        :return:
+        :rtype:
+        """
+        height, width = Constants.BIGGEST_CHUNK.chunk.shape
+        solution = numpy.zeros((Constants.PATCH_DIMENSIONS * height,
+                                Constants.PATCH_DIMENSIONS * width,
+                                Constants.COLOUR_CHANNELS), dtype="uint8")
+
+        for key in dictionary.keys():
+            y, x = dictionary[key]
+            y0 = y * Constants.PATCH_DIMENSIONS
+            x0 = x * Constants.PATCH_DIMENSIONS
+            y1 = y0 + Constants.PATCH_DIMENSIONS
+            x1 = x0 + Constants.PATCH_DIMENSIONS
+
+            solution[y0:y1, x0:x1] = self.pieces[key].piece
+
+        openCV.imwrite("no_trimming_" + Constants.settings["output_path"] + Constants.settings["name_of_image"] + "_"
+                       + str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE) + "_"
+                       + str(self.steps) + "_no.png", solution)
+
+    def assemble_after_each_step(self):
+        pass
+
+    # def trim_biggest_chunk(self):
+    #     """
+    #
+    #     :return:
+    #     :rtype:
+    #     """
+    #
+    #     # TODO - Make a new biggest chunk that has only pieces that are within the max allowable HEIGHT and WIDTH
+    #     # TODO - Try and keep the parent the same as in the chunk we are copying from
+    #             # TODO - Select a new parent if that is not possible and perform the appropriate parent changes in self.parents
+    #     new_chunk = numpy.full((Constants.HEIGHT_RANGE, Constants.WIDTH_RANGE), fill_value=Constants.VALUE_INITIALIZER,
+    #                            dtype="int16")
+    #
+    #     for y in range(Constants.HEIGHT_RANGE):
+    #         for x in range(Constants.WIDTH_RANGE):
+    #             pass
+
+    def find_biggest_chunk(self):
         """
             Finds the chunk containing most puzzle pieces and saves it in the constants for later use
         :return:
