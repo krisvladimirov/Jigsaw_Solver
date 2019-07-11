@@ -9,13 +9,6 @@ import glob
 import Constants as Constants
 
 
-def main():
-
-    # do_matchlift_weights()
-    do_normal_solving()
-    # pre_calculate_weights()
-
-
 def pre_calculate_weights():
     path_kris = "../output/no_rotation/kris/"
     path_greece = "../output/no_rotation/greece/"
