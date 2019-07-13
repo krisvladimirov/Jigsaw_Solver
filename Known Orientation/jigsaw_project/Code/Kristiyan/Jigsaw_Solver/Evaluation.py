@@ -40,7 +40,7 @@ class Evaluation:
                         counter = counter + 1
                     piece_index += 1
 
-                print(counter)
+                # print(counter)
         except (IOError, OSError) as e:
             print("Could not open the file associated with the evaluation of piece neighbours! "
                   "Check path in settings.json")
@@ -59,6 +59,30 @@ class Evaluation:
         else:
             # Known orientation skip this step
             pass
+
+    def check_file_size(self, solver):
+        """
+            Makes a simple check to ensure the right size files are added in the settings.json. Throws and error if
+            sizes don't match. Just a precaution
+        :param solver: The solver object
+        :type solver: Solver.Solver
+        :return:
+        :rtype:
+        """
+        total_pieces = solver.pieces
+        if len(self.original_piece_locations) != total_pieces:
+            raise Exception(
+                "Please specify correctly the following arguments in the settings.json, \"path_to_locations\" in "
+                "\"evaluation\"")
+        if len(self.original_piece_neighbours) != total_pieces:
+            raise Exception(
+                "Please specify correctly the following arguments in the settings.json, \"path_to_neighbours\" in "
+                "\"evaluation\"")
+        if str.lower(Constants.settings["mode"]) == Constants.UNKNOWN_ORIENTATION:
+            if len(self.original_piece_orientation) != total_pieces:
+                raise Exception(
+                    "Please specify correctly the following arguments in the settings.json, \"path_to_rotations\" in "
+                    "\"evaluation\"")
 
     def evaluate(self):
         """
