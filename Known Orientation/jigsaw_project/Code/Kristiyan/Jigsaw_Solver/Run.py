@@ -1,124 +1,14 @@
-import argparse
-import os
 import cv2 as openCV
 import Detector as Detector
 import Solver as Solver
 import json
 import Evaluation as Evaluation
-import glob
 import Constants as Constants
-
-
-def pre_calculate_weights():
-    path_kris = "../output/no_rotation/kris/"
-    path_greece = "../output/no_rotation/greece/"
-    path_big_cat = "../output/no_rotation/big_cat/"
-    path_star_wars = "../output/no_rotation/star_wars/"
-
-    # kris_files = [f for f in glob.glob(path_kris + "*.png")]
-    # greece_files = [f for f in glob.glob(path_greece + "*.png")]
-    # star_wars_files = [f for f in glob.glob(path_star_wars + "*.png")]
-    # big_cat_files = [f for f in glob.glob(path_big_cat + "*.png")]
-
-    # for path in kris_files:
-    #     extracted_pieces, dimensions, og_dimensions = Detector.main(path)
-    #     solver = Solver.Solver()
-    #     solver.start_solving(extracted_pieces, dimensions, og_dimensions)
-    #     solver.save_weights_to_npy(root_folder="../weights", child_folder="/kris/", name="kris")
-    #     solver = None
-    #
-    # print("Completed kris")
-    #
-    # for path in greece_files:
-    #     extracted_pieces, dimensions, og_dimensions = Detector.main(path)
-    #     solver = Solver.Solver()
-    #     solver.start_solving(extracted_pieces, dimensions, og_dimensions)
-    #     solver.save_weights_to_npy(root_folder="../weights", child_folder="/greece/", name="greece")
-    #     solver = None
-    #
-    # print("Completed greece")
-
-    # for path in star_wars_files:
-    #     extracted_pieces, dimensions, og_dimensions = Detector.main(path)
-    #     solver = Solver.Solver()
-    #     solver.start_solving(extracted_pieces, dimensions, og_dimensions)
-    #     solver.save_weights_to_npy(root_folder="../weights", child_folder="/star_wars/", name="star_wars")
-    #     solver = None
-    #
-    # print("Completed star_wars")
-    #
-    # for path in big_cat_files:
-    #     extracted_pieces, dimensions, og_dimensions = Detector.main(path)
-    #     solver = Solver.Solver()
-    #     solver.start_solving(extracted_pieces, dimensions, og_dimensions)
-    #     solver.save_weights_to_npy(root_folder="../weights", child_folder="/big_cat/", name="big_cat")
-    #     solver = None
-    #
-    # print("Completed big_cat")
-
-
-# def do_normal_solving():
-#
-#     """
-#
-#     :return:
-#     :rtype:
-#     """
-#     """
-#         LOOK AT Solver.start_solving() function for more info on option!
-#     """
-#     OPTION = 0
-#     path_to_image = ""
-#     path_to_weight = ""
-#     path_to_locations = ""
-#     path_to_rotations = ""
-#     save_evaluation_to = ""
-#     # path_to_matchlift_data = "big_cat_9.mat"
-#     # num_correspondences = 1
-#     # output_path = ""
-#
-#     print("Loading: ", path_to_image)
-#     print("Starting extracting of pieces")
-#     extracted_pieces, dimensions, og_dimensions = Detector.main(path_to_image)
-#     print(str(len(extracted_pieces)), "pieces have been extracted successfully")
-#
-#     print("Preparing Solver program...")
-#     solver = Solver.Solver()
-#     print("Loading the matchlift weights...")
-#     # solver.read_cycle_data(path_to_matchlift_data, num_correspondences, len(extracted_pieces))
-#     # print("Finished reading machlift data")
-#     # print(solver.matchlift_weights_0_4)
-#     print("Starting Solver...")
-#     solver.start_solving(extracted_pieces, dimensions, og_dimensions, path_to_weight, OPTION)
-#
-#     # print("Evaluation process commence...")
-#     # ev = Evaluation.Evaluation()
-#     # ev.load_data(path_to_locations, path_to_rotations)
-#     # ev.evaluate(save_evaluation_to)
-#     # ev.piece_evaluation()
-#
-#
-# def do_matchlift_weights():
-#     path = "../output/no_rotation/big_cat_16_no.png"
-#     path_to_weight = "../weights/kris/kris_16_no.npy"
-#     output_path = "./"
-#     name_of_image = "big_cat"
-#     how_many_correspondences = 1
-#
-#     print("Loading: ", path)
-#     print("Starting extracting of pieces")
-#     extracted_pieces, dimensions, og_dimensions = Detector.main(path)
-#     print(str(len(extracted_pieces)), "pieces have been extracted successfully")
-#     print("Preparing Solver for Matchlift...")
-#     solver = Solver.Solver()
-#     print("Solver computing correspondences for MatchLift...")
-#     solver.start_solving(extracted_pieces, dimensions, og_dimensions, path_to_weight)
-#     solver.get_mgc_matchlift(output_path + name_of_image, how_many_correspondences)
 
 
 def load_puzzle():
     """
-
+        Loads the image containing the puzzle
     :return:
     """
     # Loading the image containing the puzzle
@@ -127,18 +17,6 @@ def load_puzzle():
     # Extracting the puzzle pieces
     extracted_pieces, dimensions, og_dimensions = Detector.main(Constants.settings["path_to_image"])
     print(str(len(extracted_pieces)), "pieces have been extracted successfully")
-
-    # Check if their are existing weights present
-    if Constants.settings["weight"]["path_to_weights"] != Constants.EMPTY_PATH:
-        # TODO - Check if the paths are correct
-        # Load the weights
-        # Calculate the edges between the weights
-        pass
-    else:
-
-        # Calculate weights and edges
-        pass
-
     return extracted_pieces, dimensions, og_dimensions
 
 
@@ -175,19 +53,19 @@ def write_data(solver):
     """
 
     # Puzzle weights
-    if str.lower(str(Constants.settings["writing"]["weights"]["perform"]) == Constants.YES):
+    if Constants.settings["writing"]["weights"]["perform"] == Constants.YES:
         solver.save_weights_to_npy(Constants.settings["writing"])
-    elif str.lower(str(Constants.settings["writing"]["weights"]["perform"]) != Constants.YES or str(
-            Constants.settings["writing"]["weights"]["perform"]) != Constants.NO):
+    elif Constants.settings["writing"]["weights"]["perform"] != Constants.YES \
+            or Constants.settings["writing"]["weights"]["perform"] != Constants.NO:
         print("Did not pre-calculate weights, \"mode\" == write "
               "but \"weight\" perform is \"no\".\nCheck the settings.json if a mistake was made\n")
 
     # Matchlift data
-    if str.lower(Constants.settings["writing"]["matchlift"]["perform"]) == Constants.YES:
+    if Constants.settings["writing"]["matchlift"]["perform"] == Constants.YES:
         # TODO
         solver.get_mgc_matchlift(Constants.settings["writing"])
-    elif str.lower(Constants.settings["writing"]["matchlift"]["perform"]) != Constants.NO \
-            or str.lower(Constants.settings["writing"]["matchlift"]["perform"]) != Constants.YES:
+    elif Constants.settings["writing"]["matchlift"]["perform"] != Constants.NO \
+            or Constants.settings["writing"]["matchlift"]["perform"] != Constants.YES:
         print("Did not calculate correspondences for matchlift, \"mode\" == write "
               "but \"matchlift\" perform is \"yes\".\nCheck the settings.json if a mistake was made\n")
 
@@ -294,15 +172,15 @@ def start():
 
     # Check if there is an evaluation provided
     # Perform evaluation if it is provided
-    if str.lower(Constants.settings["evaluation"]["perform"]) == Constants.YES:
-        perform_evaluation()
+    if str.lower(Constants.settings["mode"]) != Constants.WRITE:
+        if str.lower(Constants.settings["evaluation"]["perform"]) == Constants.YES:
+            perform_evaluation()
 
-    # Crashesh for some reason
-    elif str.lower(Constants.settings["evaluation"]["perform"]) != Constants.NO \
-            and str.lower(Constants.settings["evaluation"]["perform"]) != Constants.YES:
-        print(Constants.settings["evaluation"]["perform"])
-        raise Exception("Please specify correctly the \"perform\" attribute of \"evaluation\"!. If you want to perform "
-                        "evaluation on the solved puzzle type \"yes\", if not type \"no\".")
+        elif str.lower(Constants.settings["evaluation"]["perform"]) != Constants.NO \
+                and str.lower(Constants.settings["evaluation"]["perform"]) != Constants.YES:
+            print(Constants.settings["evaluation"]["perform"])
+            raise Exception("Please specify correctly the \"perform\" attribute of \"evaluation\"!. If you want to perform "
+                            "evaluation on the solved puzzle type \"yes\", if not type \"no\".")
 
 
 if __name__ == "__main__":
