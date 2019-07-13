@@ -69,7 +69,7 @@ class Evaluation:
         :return:
         :rtype:
         """
-        total_pieces = solver.pieces
+        total_pieces = len(solver.pieces)
         if len(self.original_piece_locations) != total_pieces:
             raise Exception(
                 "Please specify correctly the following arguments in the settings.json, \"path_to_locations\" in "

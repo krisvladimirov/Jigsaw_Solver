@@ -70,18 +70,6 @@ def write_data(solver):
               "but \"matchlift\" perform is \"yes\".\nCheck the settings.json if a mistake was made\n")
 
 
-def perform_evaluation():
-    """
-        Function enforcing puzzle evaluation after it has been created
-    :return:
-    """
-    print("Evaluation process commence...")
-    ev = Evaluation.Evaluation()
-    ev.load_data()
-    ev.evaluate()
-    ev.piece_evaluation()
-
-
 def ask_to_rotate(solver):
     """
         TODO
@@ -159,6 +147,14 @@ def start():
     extracted_pieces, dimensions, og_dimensions = load_puzzle()
     solver.prepare_solver(extracted_pieces, dimensions, og_dimensions)
 
+    ev = None
+
+    # Will throw and error if the file of wrong size
+    if str.lower(Constants.settings["evaluation"]["perform"]) == Constants.YES:
+        ev = Evaluation.Evaluation()
+        ev.load_data()
+        ev.check_file_size(solver)
+
     # Solving a puzzle
     if str.lower(Constants.settings["mode"]) == Constants.SOLVE:
         solve(solver)
@@ -174,7 +170,7 @@ def start():
     # Perform evaluation if it is provided
     if str.lower(Constants.settings["mode"]) != Constants.WRITE:
         if str.lower(Constants.settings["evaluation"]["perform"]) == Constants.YES:
-            perform_evaluation()
+            ev.evaluate()
 
         elif str.lower(Constants.settings["evaluation"]["perform"]) != Constants.NO \
                 and str.lower(Constants.settings["evaluation"]["perform"]) != Constants.YES:
