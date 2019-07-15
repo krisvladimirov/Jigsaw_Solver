@@ -19,7 +19,7 @@ class Chunk:
         self.current_height = 1
         self.current_width = 1
 
-    def add(self, piece_u, piece_v, side_a, side_b, chunk_v):
+    def add_together(self, piece_u, piece_v, side_a, side_b, chunk_v):
         """
 
         :param piece_u:
@@ -85,7 +85,7 @@ class Chunk:
                         self.adjust_piece_coordinates(piece_coordinates_u, correction_off_set)
 
                 elif x_u > x_v:
-                    correction_off_set = tuple(map(add, (0, position_u[1]), off_set))
+                    correction_off_set = (0, x_u - x_v + 1)
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, correction_off_set)
 
@@ -106,7 +106,7 @@ class Chunk:
                         self.adjust_piece_coordinates(piece_coordinates_u, correction_off_set)
 
                 elif x_u > x_v:
-                    correction_off_set = tuple(map(add, (0, position_u[1]), off_set))
+                    correction_off_set = (0, x_u - x_v + 1)
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, correction_off_set)
 
@@ -127,7 +127,7 @@ class Chunk:
                         self.adjust_piece_coordinates(piece_coordinates_u, correction_off_set)
 
                 elif x_u > x_v:
-                    correction_off_set = tuple(map(add, (0, position_u[1]), off_set))
+                    correction_off_set = (0, x_u - x_v + 1)
                     piece_coordinates_v, current_height_v, current_width_v = \
                         self.adjust_piece_coordinates(piece_coordinates_v, correction_off_set)
 
@@ -200,12 +200,16 @@ class Chunk:
                                                       chunk_v, current_height_v, current_width_v,
                                                       current_height_u, current_width_u)
             if not correct_placement and not out_of_boundary:
+                self.current_height, self.current_width = self.find_dimensions(current_height_v, current_width_v,
+                                                                               current_height_u, current_width_u)
                 self.merge_chunks(piece_coordinates_u, piece_coordinates_v)
                 return False
             else:
                 return True
         else:
             if not correct_placement:
+                self.current_height, self.current_width = self.find_dimensions(current_height_v, current_width_v,
+                                                                               current_height_u, current_width_u)
                 self.merge_chunks(piece_coordinates_u, piece_coordinates_v)
                 return False
             else:
@@ -224,23 +228,50 @@ class Chunk:
         :rtype:
         """
         self.piece_coordinates = {**piece_coordinates_u, **piece_coordinates_v}
-        self.update_dimensions()
         self.update_chunk()
         self.uninitialized = False
 
-    def update_dimensions(self):
+    def find_dimensions(self, chunk_v_height, chunk_v_width, chunk_u_height, chunk_u_width):
         """
-            Updates the dimensions of the chunk
+
+        :param chunk_v_height:
+        :type chunk_v_height: int
+        :param chunk_v_width:
+        :type chunk_v_width: int
+        :param chunk_u_height:
+        :type chunk_u_height: int
+        :param chunk_u_width:
+        :type chunk_u_width: int
         :return:
+        :rtype:
         """
-        self.chunk = numpy.full((self.current_height, self.current_width), fill_value=Constants.VALUE_INITIALIZER,
-                                dtype="int16")
+        temporary_height = self.current_height
+        temporary_width = self.current_width
+
+        # Assign new dimension values if all test above have passed
+        if chunk_v_height > temporary_height:
+            temporary_height = chunk_v_height
+        if chunk_v_width > temporary_width:
+            temporary_width = chunk_v_width
+        if chunk_u_height > temporary_height:
+            temporary_height = chunk_u_height
+        if chunk_u_width > temporary_width:
+            temporary_width = chunk_u_width
+
+        # self.current_height = temporary_height
+        # self.current_width = temporary_width
+        return temporary_height, temporary_width
 
     def update_chunk(self):
         """
             Place all the new pieces in the (U) chunk
         :return:
         """
+        # Updates the dimensions of the chunk
+        self.chunk = numpy.full((self.current_height, self.current_width), fill_value=Constants.VALUE_INITIALIZER,
+                                dtype="int16")
+
+        # Repopulates it with the new pieces
         for key, value in self.piece_coordinates.items():
             self.chunk[value] = key
 
@@ -265,32 +296,17 @@ class Chunk:
         :return:
         :rtype:
         """
-        temporary_height = self.current_height
-        temporary_width = self.current_width
+
+        # This one should only check if there are pieces out of boundary and not set the self.current_height and
+        # self.current_width
+
+        temporary_height, temporary_width = self.find_dimensions(chunk_v_height, chunk_v_width, chunk_u_height,
+                                                                 chunk_u_width)
         will_fit = False
 
-        # Check if we have gone out of boundary
-        if chunk_v_height > Constants.HEIGHT_RANGE \
-                or chunk_v_width > Constants.WIDTH_RANGE \
-                or chunk_u_height > Constants.HEIGHT_RANGE \
-                or chunk_u_width > Constants.WIDTH_RANGE:
-            return True  # Out of the puzzles boundary
-
-        # Assign new dimension values if all test above have passed
-        if chunk_v_height > temporary_height:
-            temporary_height = chunk_v_height
-        if chunk_v_width > temporary_width:
-            temporary_width = chunk_v_width
-        if chunk_u_height > temporary_height:
-            temporary_height = chunk_u_height
-        if chunk_u_width > temporary_width:
-            temporary_width = chunk_u_width
-
-        # Special case where either u or v is the biggest case so it wouldn't make much sense to perform the mask
+        # Special case where either u or v is the biggest chunk so it wouldn't make much sense to perform the mask
         # against the biggest chunk
         if self == Constants.BIGGEST_CHUNK or chunk_v == Constants.BIGGEST_CHUNK:
-            self.current_height = temporary_height
-            self.current_width = temporary_width
             return False
 
         # Check if there is any overlap between the pieces
@@ -302,9 +318,10 @@ class Chunk:
             for key, value in coordinates.items():
                 copy_chunk[value] = key
 
+            # TODO - Document this part because I don't remember how it works sadly, to tired
             copy_chunk[copy_chunk > -1] = 1
             copy_chunk[copy_chunk < 1] = 0
-
+            # TODO - Document this part because I don't remember how it works sadly, to tired
             biggest_chunk_copy = numpy.copy(Constants.BIGGEST_CHUNK.chunk)
             biggest_chunk_copy[biggest_chunk_copy > -1] = 0
             # TODO - Make into while loops
@@ -320,14 +337,10 @@ class Chunk:
             # TODO - We only need to not update the dimensions if the secondary check fails
 
             if will_fit:
-                self.current_height = temporary_height
-                self.current_width = temporary_width
                 return False
             else:
                 return True
         else:
-            self.current_height = temporary_height
-            self.current_width = temporary_width
             return False
 
     @staticmethod
@@ -346,13 +359,14 @@ class Chunk:
         for key, value in dictionary.items():
             old_value = dictionary[key]
             new_value = tuple(map(add, old_value, off_set))
+            # While calculating the new pieces we look at how height changes and if it exceeds the value of the chunk
+            # that it is going to be merged into
             if new_value[0] + 1 > height:
                 height = new_value[0] + 1
             if new_value[1] + 1 > width:
                 width = new_value[1] + 1
             dictionary[key] = new_value
-        # TODO - While calculating the new pieces we look at how height changes and if it exceeds the value of the chunk
-        # that it is going to be merged into
+
         return dictionary, height, width
 
     @staticmethod
@@ -378,3 +392,15 @@ class Chunk:
         else:
             # Not Empty - Collisions
             return True
+
+    def update_piece_coordinates(self):
+        """
+            Updates the coordinates of each piece in the biggest chunk after the trimming process
+        :return:
+        :rtype:
+        """
+        for i in range(self.current_height):
+            for j in range(self.current_width):
+                key = self.chunk[i][j]
+                if key != -1:
+                    self.piece_coordinates[key] = (i, j)
