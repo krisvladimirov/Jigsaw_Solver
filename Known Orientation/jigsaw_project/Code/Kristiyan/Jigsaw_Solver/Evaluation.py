@@ -23,7 +23,7 @@ class Evaluation:
                     line = single_line.rstrip("\n")
                     y, x = line.split(",")
                     self.original_piece_locations.append((int(y), int(x)))
-        except(IOError, OSError) as e:
+        except(IOError, OSError, IndexError) as e:
             print("Could not open the file associated with the evaluation of piece position/location! "
                   "Check path in settings.json")
 
@@ -41,7 +41,7 @@ class Evaluation:
                     piece_index += 1
 
                 # print(counter)
-        except (IOError, OSError) as e:
+        except (IOError, OSError, IndexError) as e:
             print("Could not open the file associated with the evaluation of piece neighbours! "
                   "Check path in settings.json")
 
@@ -53,7 +53,7 @@ class Evaluation:
                     for single_line in raw:
                         k_rotations = single_line.rsplit("\n")
                         self.original_piece_orientation.append(int(k_rotations[0]))
-            except (IOError, OSError) as e:
+            except (IOError, OSError, IndexError) as e:
                 print("Could not open the file associated with the evaluation of piece rotations! "
                       "Check path in settings.json")
         else:

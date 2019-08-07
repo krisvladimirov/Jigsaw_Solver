@@ -16,7 +16,8 @@ def load_puzzle():
     print("Starting extracting of pieces...")
     # Extracting the puzzle pieces
     extracted_pieces, dimensions, og_dimensions = Detector.main(Constants.settings["path_to_image"])
-    print(str(len(extracted_pieces)), "pieces have been extracted successfully")
+    print(str(len(extracted_pieces)), "pieces have been extracted successfully, with dimensions -> Height:",
+          dimensions[0], " Width:", dimensions[1])
     return extracted_pieces, dimensions, og_dimensions
 
 
@@ -150,7 +151,8 @@ def start():
     ev = None
 
     # Will throw and error if the file of wrong size
-    if str.lower(Constants.settings["evaluation"]["perform"]) == Constants.YES:
+    if str.lower(Constants.settings["evaluation"]["perform"]) == Constants.YES \
+            and str.lower(Constants.settings["mode"]) == Constants.SOLVE:
         ev = Evaluation.Evaluation()
         ev.load_data()
         ev.check_file_size(solver)

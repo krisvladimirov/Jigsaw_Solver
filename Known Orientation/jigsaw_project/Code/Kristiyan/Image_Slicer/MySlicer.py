@@ -504,11 +504,10 @@ def main():
     to_where_neighbours = "../ground_truth/neighbours/"
     to_where_rotations = "../ground_truth/rotations/"
     to_where_puzzle = "../output/"
-    output_file_name = "cat"
-    from_where = "../input/cat.jpeg"
+    output_file_name = "cat_big"
+    from_where = "../input/cat_big.jpg"
     rotation = None
-    dim = 90
-
+    dim = int(1920/18)
     obj = Slicer(to_where_positions, to_where_neighbours, to_where_rotations, to_where_puzzle, output_file_name,
                  from_where, rotation, dim)
     obj.patch_slice()

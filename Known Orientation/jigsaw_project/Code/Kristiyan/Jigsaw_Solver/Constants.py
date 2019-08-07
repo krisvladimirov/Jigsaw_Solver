@@ -1,4 +1,5 @@
 import Chunk as Chunk
+import sys
 
 SOLVE = "solve"
 WRITE = "write"
@@ -68,7 +69,7 @@ PUZZLE_PIECE_SPACE = 10
 # Epsilon
 EPSILON = 0.1**6
 # Really big number
-INFINITY = 10**9
+INFINITY = sys.maxsize
 # Maximum allowable pieces on the y axis
 HEIGHT_RANGE = VALUE_INITIALIZER
 # Maximum allowable pieces on the x axis
@@ -112,6 +113,21 @@ BOTTOM_BOTTOM   = 15
 # For no rotations
 RIGHT_LEFT_OFF_SET = (0, 1)
 BOTTOM_TOP_OFF_SET = (1, 0)
+LEFT_RIGHT_OFF_SET = (0, -1)
+TOP_BOTTOM_OFF_SET = (-1, 0)
+
+# TODO - Comment
+# Based on the relation between an empty spot and a puzzle piece, return the side of the empty position
+# NOTE -> a neighbour in this case is any puzzle piece adjacent to an empty spot
+# I.E. If we have e an empty spot at coordinates (y=3, x=3) and there is a neighbour at (y=3, x=4), the offset from the
+# empty spot to the neighbour is (0, 1) because we add 1 unit on the x axis. Thus we (move to the right) would be
+# pointing from the right side of the empty spot to the left side of the neighbour piece. (Draw it out to clarify)
+off_set_to_puzzle_side = {
+    (0, 1):  2,
+    (1, 0):  3,
+    (0, -1): 0,
+    (-1, 0): 1
+}
 
 
 # Used for Unknown orientation
@@ -185,6 +201,7 @@ def convert_relation(side_a, side_b):
     else:
         return side_a, side_b, False
 
+
 # Used for Known orientation
 def get_combo_without_rotation(side_a):
     """
@@ -194,6 +211,7 @@ def get_combo_without_rotation(side_a):
     :return:
     """
     return combo_without_rotation[side_a]
+
 
 # Used for Known orientation
 # Used for Unknown orientation

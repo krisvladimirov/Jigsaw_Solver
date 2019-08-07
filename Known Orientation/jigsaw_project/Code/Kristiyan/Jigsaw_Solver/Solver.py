@@ -7,7 +7,7 @@ import Chunk as Chunk
 import math
 import h5py
 import sys
-from operator import add
+from operator import add, sub
 from collections import deque
 import time
 import pathlib
@@ -150,7 +150,7 @@ class Solver:
         """
 
         # Check if the path exists first
-        if not pathlib.Path.exists(Constants.settings["solving"]["path_to_weights"]):
+        if not pathlib.Path.exists(pathlib.Path(Constants.settings["solving"]["path_to_weights"])):
             raise Exception("Please specify correctly the \"output_path\" attribute of \"weights\"!")
 
         self.weights = numpy.load(Constants.settings["solving"]["path_to_weights"])
@@ -208,7 +208,6 @@ class Solver:
                             single_edge = (piece_a_index, piece_b_index, relation)
                             self.matchlift_edges_0_4.append(single_edge)
                         self.matchlift_weights_0_4[piece_a_index, piece_b_index, relation] = weight
-
 
         # Sorting the weights and edges
         # self.matchlift_edges_0_4.sort(key=lambda x: self.matchlift_weights_0_4[x], reverse=True)
@@ -332,7 +331,7 @@ class Solver:
         """
 
         print("Computing the weights (dissimilarities) between puzzle pieces with", Constants.settings["puzzle_type"],
-              "orientation")
+              "orientation...")
         t = time.process_time()
         """
             The process of calculating the weight is performed for all 16 relations between the pieces as the 
@@ -372,7 +371,6 @@ class Solver:
                             self.weights[piece_a.index][piece_b.index][relation] = dissimilarity
 
         # Normalization step
-        # TODO - Change this a bit if calculating matchlift weights
         normalized_weights = numpy.array(self.weights)
         for i, j, rel in self.important_edges:
             min_weight = min(self.weights[i, :, rel].min(), self.weights[:, j, rel].min())
@@ -392,7 +390,7 @@ class Solver:
         :return:
         """
         print("Computing the weights (dissimilarities) between puzzle pieces with", Constants.settings["puzzle_type"],
-              "orientation")
+              "orientation...")
         t = time.process_time()
 
         """
@@ -413,8 +411,6 @@ class Solver:
                         # Checks if the pieces need to be swapped in order for the weights to be calculated correctly
                         # Look at Compatibility.mgc_ssd_compatibility to understand why
                         _, _, piece_swap = Constants.convert_relation(side_a, side_b)
-                        # TODO - Figure out what that was doing?
-                        # rot_a, rot_b = self.get_rotation_mgc(side_a, side_b)
                         relation = Constants.get_relation(side_a, side_b)
                         single_edge = (piece_a.index, piece_b.index, relation)
                         if piece_swap:
@@ -463,103 +459,170 @@ class Solver:
         """
 
         # Check if the directory exists
-        if not pathlib.Path.is_dir(write_settings["weights"]["output_path"]):
+        if not pathlib.Path.is_dir(pathlib.Path(write_settings["weights"]["output_path"])):
             raise Exception("Please specify correctly the \"output_path\" attribute of \"weights\"!")
 
         if Constants.settings["puzzle_type"] == Constants.KNOWN_ORIENTATION:
             self.get_mgc()
-            string = write_settings["weight"]["output_path"] + Constants.settings["name_of_image"] + str(
+            string = write_settings["weights"]["output_path"] + Constants.settings["name_of_image"] + "_" + str(
                 len(self.pieces)) + "_no.npy"
         elif Constants.settings["puzzle_type"] == Constants.UNKNOWN_ORIENTATION:
             self.get_mgc_rotated()
-            string = write_settings["weight"]["output_path"] + Constants.settings["name_of_image"] \
-                + str(len(self.pieces)) + "_90.npy"
+            string = write_settings["weights"]["output_path"] + Constants.settings["name_of_image"] \
+                + "_" + str(len(self.pieces)) + "_90.npy"
         else:
             raise Exception("Please specify the type of the puzzle correctly! Either \"known\" for puzzles with known "
                             "orientation or \"unknown\" for puzzles with unknown orientation.")
         numpy.save(string, self.weights)
 
-    def recalculate_weights(self, pieces_of_interest, refused_pieces):
+    def recalculate_weights(self, border_pieces, border_empty_spots, trimmed_pieces):
         """
-            TODO - Correct this as it is partially wrong
-        :param pieces_of_interest:
-        :type pieces_of_interest:
+
+        :param border_pieces: We don't need them
+        :type border_pieces: We don't need them
+        :param border_empty_spots: Kye -> coordinate, Value -> list of neighbours
+        :type border_empty_spots: dict
+        :param trimmed_pieces:
+        :type trimmed_pieces: list
         :return:
         :rtype:
         """
         # Clearing the lists
         self.important_edges.clear()
         self.all_edges.clear()
-        # TODO - 1-  pieces_of_interest with other pieces of interest should not be considered
-        # TODO - 1.1 - first we consider pieces_of_interest only with refused_pieces, gives list_one
-        # TODO - 2 - secondly we consider connections between only between refused_pieces, gives list_two
-        # TODO - 3 - we sort the produced lists of each step individually
-        # TODO - 4 - append the second list and the end of the first
 
-        # TODO - Choose more sensible names
-        list_one_all_edges = []
-        list_one_important_edges = []
-        list_two_all_edges = []
-        list_two_important_edges = []
+        biggest_chunk_matrix = Constants.BIGGEST_CHUNK.chunk
+        piece_coordinates_biggest_chunk = Constants.BIGGEST_CHUNK.piece_coordinates
+        # Key -> coordinate, value -> puzzle piece
+        best_fit_empty_positions = {}
 
-        # Step 1 and 1.1
-        for u in pieces_of_interest:
-            for v in refused_pieces:
-                # Just a safety precaution, even thought it will never be false, to be tested
-                if u != v:
-                    for side_a in range(0, 4):
-                        side_b = Constants.get_combo_without_rotation(side_a)
-                        _, _, piece_swap = Constants.convert_relation(side_a, side_b)
-                        # rot_a, rot_b = self.get_rotation_mgc(side_a, side_b)
-                        relation = Constants.get_relation(side_a, side_b)
-                        single_edge = (u, v, relation)
-                        if piece_swap:
-                            list_one_all_edges.append(single_edge)
-                        else:
-                            list_one_all_edges.append(single_edge)
-                            list_one_important_edges.append(single_edge)
+        # The error we observe when placing a piece in an empty position. The total error are the combined dissimilarities
+        # between the placed piece and any neighbours
+        total_error = Constants.INFINITY
+        # Temporary variable to hold the best suitable puzzle piece for an empty position
+        best_match = Constants.VALUE_INITIALIZER
 
-        # Step 2
-        for u in refused_pieces:
-            for v in refused_pieces:
-                if u != v:
-                    for side_a in range(0, 4):
-                        side_b = Constants.get_combo_without_rotation(side_a)
-                        _, _, piece_swap = Constants.convert_relation(side_a, side_b)
-                        # rot_a, rot_b = self.get_rotation_mgc(side_a, side_b)
-                        relation = Constants.get_relation(side_a, side_b)
-                        single_edge = (u, v, relation)
-                        if piece_swap:
-                            list_two_all_edges.append(single_edge)
-                        else:
-                            list_two_all_edges.append(single_edge)
-                            list_two_important_edges.append(single_edge)
+        new_border_pieces = []
 
-        # Step 3
-        self.sort_edges([list_one_important_edges, list_one_all_edges])
-        self.sort_edges([list_two_important_edges, list_two_all_edges])
+        for key, neighbours in border_empty_spots.items():
+            # For every key (the key is a coordinate) value is a list holding all neighbours of a coordinate
+            y, x = key
+            for trm_piece in trimmed_pieces:
+                error = 0
+                for n_piece in neighbours:
+                    # The neighbour coordinates
+                    n_y, n_x = piece_coordinates_biggest_chunk[n_piece]
+                    # Offset coordinate from empty position to neighbour
+                    off_set = (n_y - y, n_x - x)
+                    # There is no care about the boundaries as the trimming process has dealt with
+                    # fixing/moving/updating the boundaries
+                    side_empty_spot = Constants.off_set_to_puzzle_side[off_set]
+                    side_neighbour = Constants.get_combo_without_rotation(side_empty_spot)
+                    relation = Constants.get_relation(side_empty_spot, side_neighbour)
+                    weight = self.weights[trm_piece, n_piece, relation]
+                    error = error + weight
 
-        # Step 4
-        self.all_edges = list_one_all_edges + list_two_all_edges
-        self.important_edges = list_one_important_edges + list_two_important_edges
+                if error < total_error:
+                    total_error = error
+                    best_match = trm_piece
+
+            total_error = Constants.INFINITY
+            best_fit_empty_positions[key] = best_match
+            trimmed_pieces.remove(best_match)
+            # Update biggest chunk
+            biggest_chunk_matrix[key] = best_match
+            # Set the best_match for each empty spot
+
+        # Now the pieces that we just placed will become the border pieces
+        # TODO - Use the pieces that are left in trimmed pieces
+        print()
 
 
+        # # TODO - Once the top part is done
+        # # TODO - 1. Take the rest of the pieces that do not have a place
+        #
+        #
+        # # TODO - 1-  pieces_of_interest with other pieces of interest should not be considered
+        # # TODO - 1.1 - first we consider pieces_of_interest only with refused_pieces, gives list_one
+        # # TODO - 2 - secondly we consider connections between only between refused_pieces, gives list_two
+        # # TODO - 3 - we sort the produced lists of each step individually
+        # # TODO - 4 - append the second list and the end of the first
+        #
+        # # TODO - Choose more sensible names
+        # list_one_all_edges = []
+        # list_one_important_edges = []
+        # list_two_all_edges = []
+        # list_two_important_edges = []
+        #
+        # # Step 1 and 1.1
         # for u in pieces_of_interest:
-        #     for v in pieces_of_interest:
+        #     for v in refused_pieces:
+        #         # Just a safety precaution, even thought it will never be false, to be tested
         #         if u != v:
         #             for side_a in range(0, 4):
-        #                 # image_a = self.pieces[u].piece
-        #                 # image_b = self.pieces[v].piece
         #                 side_b = Constants.get_combo_without_rotation(side_a)
         #                 _, _, piece_swap = Constants.convert_relation(side_a, side_b)
         #                 # rot_a, rot_b = self.get_rotation_mgc(side_a, side_b)
         #                 relation = Constants.get_relation(side_a, side_b)
         #                 single_edge = (u, v, relation)
         #                 if piece_swap:
-        #                     self.all_edges.append(single_edge)
+        #                     list_one_all_edges.append(single_edge)
         #                 else:
-        #                     self.important_edges.append(single_edge)
-        #                     self.all_edges.append(single_edge)
+        #                     list_one_all_edges.append(single_edge)
+        #                     list_one_important_edges.append(single_edge)
+        #
+        # # Step 2
+        # for u in refused_pieces:
+        #     for v in refused_pieces:
+        #         if u != v:
+        #             for side_a in range(0, 4):
+        #                 side_b = Constants.get_combo_without_rotation(side_a)
+        #                 _, _, piece_swap = Constants.convert_relation(side_a, side_b)
+        #                 # rot_a, rot_b = self.get_rotation_mgc(side_a, side_b)
+        #                 relation = Constants.get_relation(side_a, side_b)
+        #                 single_edge = (u, v, relation)
+        #                 if piece_swap:
+        #                     list_two_all_edges.append(single_edge)
+        #                 else:
+        #                     list_two_all_edges.append(single_edge)
+        #                     list_two_important_edges.append(single_edge)
+        #
+        # # Step 3
+        # # print("Before sorting")
+        # # print("Important edges")
+        # # print(list_two_important_edges)
+        # # print("All edges")
+        # # print(list_two_all_edges)
+        # self.sort_edges([list_one_important_edges, list_one_all_edges])
+        # self.sort_edges([list_two_important_edges, list_two_all_edges])
+        #
+        # # print("After sorting")
+        # # print("Important edges")
+        # # print(list_two_important_edges)
+        # # print("All edges")
+        # # print(list_two_all_edges)
+        #
+        # # Step 4
+        # self.all_edges = list_one_all_edges + list_two_all_edges
+        # self.important_edges = list_one_important_edges + list_two_important_edges
+        #
+        # # for u in pieces_of_interest:
+        # #     for v in pieces_of_interest:
+        # #         if u != v:
+        # #             for side_a in range(0, 4):
+        # #                 # image_a = self.pieces[u].piece
+        # #                 # image_b = self.pieces[v].piece
+        # #                 side_b = Constants.get_combo_without_rotation(side_a)
+        # #                 _, _, piece_swap = Constants.convert_relation(side_a, side_b)
+        # #                 # rot_a, rot_b = self.get_rotation_mgc(side_a, side_b)
+        # #                 relation = Constants.get_relation(side_a, side_b)
+        # #                 single_edge = (u, v, relation)
+        # #                 if piece_swap:
+        # #                     self.all_edges.append(single_edge)
+        # #                 else:
+        # #                     self.important_edges.append(single_edge)
+        # #                     self.all_edges.append(single_edge)
+
 
     def sort_edges(self, lists_to_sort):
         """
@@ -574,9 +637,6 @@ class Solver:
         """
         for lst in lists_to_sort:
             lst.sort(key=lambda x: self.weights[x])
-
-        # self.important_edges.sort(key=lambda x: self.weights[x])
-        # self.all_edges.sort(key=lambda x: self.weights[x])
 
     def find_mst(self):
         """
@@ -594,41 +654,135 @@ class Solver:
         while not_in_one:
             self.kruskal_alg()
             self.find_biggest_chunk()
-            # self.trim_biggest_chunk()
-            refused_pieces = self.get_pieces_without_a_place()
-            if not refused_pieces \
-                    and len(Constants.BIGGEST_CHUNK.piece_coordinates) == (
-                    Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE):
-                # Change the condition whenever all pieces are located in one chunk
-                not_in_one = False
-            else:
-                border_pieces = self.find_border_pieces(Constants.BIGGEST_CHUNK.chunk)
-                self.reinitialize_parameters(refused_pieces)
-                self.recalculate_weights(border_pieces, refused_pieces)
-                # self.recalculate_weights(border_pieces.union(refused_pieces))
-            infinity_counter = infinity_counter + 1
+            # trimmed_pieces = self.trim_biggest_chunk()
+            # # refused_pieces = []
+            # if not trimmed_pieces \
+            #         and len(Constants.BIGGEST_CHUNK.piece_coordinates) == (
+            #         Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE):
+            #     # Change the condition whenever all pieces are located in one chunk
+            #     not_in_one = False
+            # else:
+            #     border_pieces, border_empty_spots = self.find_border_pieces(Constants.BIGGEST_CHUNK.chunk)
+            #     # self.reinitialize_parameters(refused_pieces)
+            #     self.recalculate_weights(border_pieces, border_empty_spots, trimmed_pieces)
+            #
+            # infinity_counter = infinity_counter + 1
+
+            not_in_one = False
             print("Infinity counter at ->", infinity_counter)
         # self.assembly_image(Constants.BIGGEST_CHUNK.piece_coordinates)
         self.just_assemble_it(Constants.BIGGEST_CHUNK.piece_coordinates)
         elapsed_time = time.process_time() - t
-        print("Elapsed time for solving big_cat_", str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE), "_no", " pieces of", Constants.PATCH_DIMENSIONS, "pixel size:",
-              elapsed_time, "s")
+        print("Elapsed time solving puzzle with", str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE), "piece of",
+              Constants.PATCH_DIMENSIONS, "pixel size in", elapsed_time, "S")
 
-    def reinitialize_parameters(self, refused_pieces):
+    def trim_biggest_chunk(self):
         """
-            Resets the chunks of refused pieces\n
-            Resets the parent of a refused piece to be itself
-            Resets the trees, thus creating a new tree for each refused piece
-        :param refused_pieces:
-        :type refused_pieces:
+
         :return:
         :rtype:
         """
-        for index in refused_pieces:
-            chunk = Chunk.Chunk(index)
-            self.chunks[index] = chunk
-            self.parent_set[index] = index
-            self.trees[index] = {index}
+
+        # the numpy matrix holding piece location
+        biggest_chunk = Constants.BIGGEST_CHUNK.chunk
+        parent = Constants.BIGGEST_CHUNK.parent_index
+
+        # kurva = self.find_parent(self.parent_set, 116)
+
+        # TODO - Comment on this part
+        # TODO - Something is wrong here
+        fewest_empty_space_counter = Constants.INFINITY
+        start_y = Constants.VALUE_INITIALIZER
+        start_x = Constants.VALUE_INITIALIZER
+        end_y = Constants.VALUE_INITIALIZER
+        end_x = Constants.VALUE_INITIALIZER
+
+        height, width = biggest_chunk.shape
+        diff_in_height = height - Constants.HEIGHT_RANGE
+        diff_in_width = width - Constants.WIDTH_RANGE
+
+        # TODO - decide what to do with these
+        if diff_in_height < 0:
+            pass
+        if diff_in_width < 0:
+            pass
+
+        for x in range(diff_in_width + 1):
+            for y in range(diff_in_height + 1):
+                temp_trimmed_chunk = biggest_chunk[y:y + Constants.HEIGHT_RANGE, x:x + Constants.WIDTH_RANGE]
+                num_of_empty_places = numpy.count_nonzero(temp_trimmed_chunk == -1)
+                if num_of_empty_places < fewest_empty_space_counter:
+                    fewest_empty_space_counter = num_of_empty_places
+                    start_x = x
+                    start_y = y
+                    end_x = x + Constants.WIDTH_RANGE
+                    end_y = y + Constants.HEIGHT_RANGE
+
+        all_pieces = [i for i in range(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE)]
+        trimmed_pieces = list()
+        non_trimmed_pieces = set(biggest_chunk[start_y:end_y, start_x:end_x].flatten())
+
+        if -1 in non_trimmed_pieces:
+            non_trimmed_pieces.remove(-1)
+
+        for i in all_pieces:
+            if i not in non_trimmed_pieces:
+                trimmed_pieces.append(i)
+
+        # If the parent piece is trimmed from the biggest chunk
+        if parent in trimmed_pieces:
+            # TODO - If the parent piece is inside the biggest chunk after trimming -> no problem
+            # TODO - If the parent piece is outside the biggest chunk after trimming and does not have any parents
+            #  -> It is its own parent as
+            print("Yep it is in")
+            pass
+        # If the parent is inside the biggest chunk, perform normal procedure
+        else:
+            # Reset the chunks of pieces that have been trimmed
+            # Reset the parent of the trimmed pieces to be itself
+            # Reset the trees of the trimmed pieces, thus create a new tree for each trimmed piece
+            # TODO - Missed important steep
+            # TODO - Need to update any piece that has a parent part of the trimmed pieces that ain't good
+
+            # TODO - 1.1 Find any children of of every trimmed piece
+            # TODO - 1.2 Find the parents of the trimmed pieces
+
+            # Set the parent of all pieces in the biggest chunk to be the same, i.e. the parent of the biggest chunk
+            for index in non_trimmed_pieces:
+                self.parent_set[index] = parent
+
+            for index in trimmed_pieces:
+                chunk = Chunk.Chunk(index)
+                self.chunks[index] = chunk
+                self.parent_set[index] = index
+                self.trees[index] = {index}
+
+            # Update the chunk after trimming some pieces
+            Constants.BIGGEST_CHUNK.chunk = biggest_chunk[start_y:end_y, start_x:end_x]
+            # Update the biggest chunk dimensions
+            Constants.BIGGEST_CHUNK.current_height = Constants.HEIGHT_RANGE
+            Constants.BIGGEST_CHUNK.current_width = Constants.WIDTH_RANGE
+            # Update the coordinates of pieces inside the biggest chunk after the trimming process
+            Constants.BIGGEST_CHUNK.piece_coordinates.clear()
+            Constants.BIGGEST_CHUNK.update_piece_coordinates()
+
+        return trimmed_pieces
+
+    # def reinitialize_parameters(self, refused_pieces):
+    #     """
+    #         Resets the chunks of refused pieces\n
+    #         Resets the parent of a refused piece to be itself
+    #         Resets the trees, thus creating a new tree for each refused piece
+    #     :param refused_pieces:
+    #     :type refused_pieces:
+    #     :return:
+    #     :rtype:
+    #     """
+    #     for index in refused_pieces:
+    #         chunk = Chunk.Chunk(index)
+    #         self.chunks[index] = chunk
+    #         self.parent_set[index] = index
+    #         self.trees[index] = {index}
 
     @staticmethod
     def find_border_pieces(chunk_matrix):
@@ -637,13 +791,17 @@ class Solver:
         :param chunk_matrix:
         :type chunk_matrix: ndarray
         :return:
-        :rtype: set
+        :rtype:
         """
+        tmp = Constants.BIGGEST_CHUNK.chunk
         # Take the height and width of the chunk we are working with
         h, w = chunk_matrix.shape
         # An array of tuples where there is and empty position (y, x)
         empty_spots = numpy.argwhere(chunk_matrix < 0)
+        border_empty_spots = {}
         border_pieces = set()
+        for coordinate in empty_spots:
+            border_empty_spots[tuple(coordinate)] = list()
         for coordinate in empty_spots:
             # The four possible off-sets in such order [Right, Bottom, Left, Top]
             for off_set in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
@@ -655,8 +813,10 @@ class Solver:
                     # If the y, x position is not empty we have found a border piece
                     if lookup_value != -1:
                         border_pieces.add(lookup_value)
+                        border_empty_spots[tuple(coordinate)].append(lookup_value)
 
-        return border_pieces
+        border_empty_spots = dict(filter(lambda elem: len(elem[1]) > 0, border_empty_spots.items()))
+        return border_pieces, border_empty_spots
 
     def create_chunks(self):
         """
@@ -699,9 +859,9 @@ class Solver:
                     chunk_v = self.chunks[v]
 
                     if piece_swap:
-                        evaluation = chunk_v.add(v_vertex, u_vertex, side_b, side_a, chunk_u)
+                        evaluation = chunk_v.add_together(v_vertex, u_vertex, side_b, side_a, chunk_u)
                     else:
-                        evaluation = chunk_u.add(u_vertex, v_vertex, side_a, side_b, chunk_v)
+                        evaluation = chunk_u.add_together(u_vertex, v_vertex, side_a, side_b, chunk_v)
 
                     if not evaluation:
                         if piece_swap:
@@ -720,6 +880,15 @@ class Solver:
                             self.trees[v] = None
                             self.chunks[v] = None
                             self.parent_set[v] = u
+
+                        off_set = Constants.get_off_set(side_a, side_b)
+                        coordinate_u = chunk_u.piece_coordinates[u_vertex]
+                        coordinate_v = chunk_u.piece_coordinates[v_vertex]
+
+                        difference = tuple(map(sub, coordinate_v, coordinate_u))
+
+                        if off_set != difference:
+                            raise Exception("Something got fucked during chunk merging!")
 
                         # TODO - Account for swapping or maybe not?
                         self.new_minimal_spanning_tree.append((u_vertex, v_vertex, relation, weight))
@@ -764,12 +933,12 @@ class Solver:
         else:
             # If the puzzle is not symmetric we get the factors
             self.get_factors(len(self.pieces))
-            self.initial_positions = numpy.full((Constants.WIDTH_RANGE, Constants.HEIGHT_RANGE),
+            self.initial_positions = numpy.full((Constants.HEIGHT_RANGE, Constants.WIDTH_RANGE),
                                                 fill_value=Constants.VALUE_INITIALIZER, dtype="uint16")
 
         # Doing it the lazy way
-        for i in range(0, Constants.WIDTH_RANGE):
-            for j in range(0, Constants.HEIGHT_RANGE):
+        for i in range(0, Constants.HEIGHT_RANGE):
+            for j in range(0, Constants.WIDTH_RANGE):
                 self.initial_positions[i, j] = counter
                 counter = counter + 1
 
@@ -838,7 +1007,7 @@ class Solver:
 
             solution[y0:y1, x0:x1] = self.pieces[key].piece
 
-        openCV.imwrite(Constants.settings["output_path"] + Constants.settings["name_of_image"] + "_"
+        openCV.imwrite(Constants.settings["solving"]["output_path"] + Constants.settings["name_of_image"] + "_"
                        + str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE) + "_"
                        + str(self.steps) + "_no.png", solution)
 
@@ -870,7 +1039,7 @@ class Solver:
 
             solution[y0:y1, x0:x1] = self.pieces[key].piece
 
-        openCV.imwrite("no_trimming_" + Constants.settings["output_path"] + Constants.settings["name_of_image"] + "_"
+        openCV.imwrite("no_trimming_testing_" + Constants.settings["solving"]["output_path"] + Constants.settings["name_of_image"] + "_"
                        + str(Constants.HEIGHT_RANGE * Constants.WIDTH_RANGE) + "_"
                        + str(self.steps) + "_no.png", solution)
 
@@ -922,7 +1091,7 @@ class Solver:
         piece_without_location = set()
         for index in range(len(self.chunks)):
             if self.chunks[index] is not None and self.chunks[index] != Constants.BIGGEST_CHUNK:
-                pieces = set(numpy.ravel(self.chunks[index]))
+                pieces = set(numpy.ravel(self.chunks[index].chunk))
                 # Remove empty positions, as we are not interested in them
                 if Constants.VALUE_INITIALIZER in pieces:
                     pieces.remove(Constants.VALUE_INITIALIZER)

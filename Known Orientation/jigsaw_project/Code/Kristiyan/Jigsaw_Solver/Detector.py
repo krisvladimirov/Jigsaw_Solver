@@ -2,7 +2,7 @@ import cv2 as openCV
 import numpy
 
 # Global variables
-lower_bound = 254   #
+lower_bound = 250   #
 upper_bound = 255   #
 
 # TODO Add encapsulation because it is not good without it
@@ -20,7 +20,8 @@ def get_pieces(image):
     og_height, og_width, _ = image.shape
     sorted_contours = detect(image)
     dimensions_of_piece = 0
-    piece_index = -1
+    counter = []
+    all_extracted = []
     for i in range(len(sorted_contours)):
         contour = sorted_contours[i]
         # Get bounding box
@@ -45,11 +46,9 @@ def get_pieces(image):
         if corrected_angle == -0.0:
             extracted = extract(image, box)
             dimensions_of_piece = extracted.shape
-            list_of_all_pieces.append(extracted)
-            piece_index = piece_index + 1
-            # openCV.imshow("Extracted piece " + str(piece_index), extracted)
-            # openCV.waitKey(0)
-            # openCV.destroyAllWindows()
+            counter.append(dimensions_of_piece)
+            all_extracted.append(extracted)
+            # list_of_all_pieces.append(extracted)
         else:
             rotated = rotate(region_of_interest, region_of_interest.shape[:2], corrected_angle)
             box_b = get_points(rotated)
@@ -66,7 +65,21 @@ def get_pieces(image):
             # openCV.waitKey(0)
             # openCV.destroyAllWindows()
 
-    return list_of_all_pieces, dimensions_of_piece, (og_height, og_width)
+    # So much spaghetti but it works I guess
+    cc = {}
+    for item in counter:
+        cc[item] = 0
+
+    for item in counter:
+        cc[item] = cc[item] + 1
+
+    max_key = max(cc, key=lambda k: cc[k])
+    for i in all_extracted:
+        sh = i.shape
+        if sh == max_key:
+            list_of_all_pieces.append(i)
+
+    return list_of_all_pieces, max_key, (og_height, og_width)
 
 
 def rotate(region_of_interest, dimensions, angle):
@@ -147,9 +160,6 @@ def extract(image, box=None):
         #  Sort contours
         print("con", len(contours))
         sorted_contours = sorted(contours, key=lambda ctr: openCV.boundingRect(ctr)[0])
-        pass
-
-    pass
 
 
 def get_angle(region_of_interest):

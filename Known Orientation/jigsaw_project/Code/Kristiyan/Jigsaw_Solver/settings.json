@@ -1,10 +1,10 @@
 {
 	"mode": "solve",
 	"puzzle_type": "known",
-    "name_of_image": "cat",
+    "name_of_image": "cat_big",
+	"path_to_image": "../output/cat_77_no.png",
 	"solving": {
-		"path_to_image": "../output/cat_77_no.png",
-		"path_to_weights": "",
+		"path_to_weights": "cat_77_no.npy",
 		"path_to_matchlift_data": "",
 		"output_path": "",
 		"dimensions": {
@@ -14,7 +14,7 @@
 	},
 	"writing": {
 		"weights": {
-			"perform": "no",
+			"perform": "yes",
 			"output_path": ""
 		},
 		"matchlift": {
@@ -25,9 +25,9 @@
 	},
 	"evaluation": {
 		"perform": "no",
-		"path_to_positions": "../ground_truth/positions/cat_77_no.txt",
-		"path_to_neighbours": "../ground_truth/neighbours/cat_77_no.txt",
+		"path_to_positions": "../ground_truth/positions/cat_40_no.txt",
+		"path_to_neighbours": "../ground_truth/neighbours/cat_40_no.txt",
 		"path_to_rotations": "../",
-		"save_evaluation_to": "evaluation_cat_77_no.txt"
+		"save_evaluation_to": "evaluation_cat_40_no.txt"
 	}
 }
